@@ -1,4 +1,3 @@
-// Firebase v8 用の初期化コード
 var firebaseConfig = {
   apiKey: "AIzaSyB0GeJuhjZ5hkArwWp1Hm9Bv1A9tDcUW8",
   authDomain: "otak-shared-event.firebaseapp.com",
@@ -10,8 +9,5 @@ var firebaseConfig = {
   measurementId: "G-6GHCR0648F"
 };
 
-// v8 の初期化
 firebase.initializeApp(firebaseConfig);
-
-// Realtime Database を使う
 const db = firebase.database();
