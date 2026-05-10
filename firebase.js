@@ -1,4 +1,4 @@
-const firebaseConfig = {
+var firebaseConfig = {
   apiKey: "AIzaSyB0GeJuhjZ5hkArwWp1Hm9Bv1A9tDcU0W8",
   authDomain: "otak-shared-event.firebaseapp.com",
   databaseURL: "https://otak-shared-event-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -9,6 +9,5 @@ const firebaseConfig = {
   measurementId: "G-6GHCR0648F"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// v8 の初期化
+firebase.initializeApp(firebaseConfig);
