@@ -1,3 +1,122 @@
+// URL パラメータから eventId を取得
+const params = new URLSearchParams(window.location.search);
+const eventId = params.get('event') || 'default';
+// ② イベントごとのピン色を読み込む
+let pinColor = "red"; // デフォルト色
+// ユーザーID → マーカー の対応表
+const markerMap = {};
+
+fetch('events.json')
+  .then(res => res.json())
+  .then(events => {
+    if (events[eventId] && events[eventId].pinColor) {
+      pinColor = events[eventId].pinColor;
+    }
+  });
+
+
+console.log("Loaded event:", eventId);
+
+firebase.database()
+  .ref(`comments/${eventId}`)
+  .on('value', snapshot => {
+    const data = snapshot.val() || {};
+    updateMap(data);
+  });
+
+
+function updateMap(data) {
+  Object.keys(data).forEach(userId => {
+    const item = data[userId];
+
+    const color = getUserColor(userId);
+
+    const marker = new google.maps.Marker({
+      position: { lat: item.lat, lng: item.lng },
+      map: map,
+      title: userId,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: "#333",
+        strokeWeight: 1
+      }
+    });
+
+    // ★ マーカーを保存
+    markerMap[userId] = marker;
+
+    // ★ コメント表示（InfoWindow）
+    const info = new google.maps.InfoWindow({
+      content: `
+        <div style="font-size:14px;">
+          <strong>${userId}</strong><br>
+          ${item.comment || "（コメントなし）"}<br>
+          <small>${new Date(item.updatedAt).toLocaleString()}</small>
+        </div>
+      `
+    });
+
+    marker.addListener("click", () => {
+      info.open(map, marker);
+    });
+  });
+
+  // ★ コメント一覧の更新（次のステップで拡張）
+  updateSidebar(data);
+
+  // ★ コメント一覧の更新
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = ""; // 一旦クリア
+
+  Object.keys(data).forEach(userId => {
+    const item = data[userId];
+
+    const div = document.createElement("div");
+    div.className = "comment-item";
+
+    div.innerHTML = `
+      <strong>${userId}</strong><br>
+      ${item.comment || "（コメントなし）"}<br>
+      <small>${new Date(item.updatedAt).toLocaleString()}</small>
+    `;
+
+    sidebar.appendChild(div);
+  });
+}
+
+
+function updateSidebar(data) {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = "";
+
+  Object.keys(data).forEach(userId => {
+    const item = data[userId];
+
+    const div = document.createElement("div");
+    div.className = "comment-item";
+
+    div.innerHTML = `
+      <strong>${userId}</strong><br>
+      ${item.comment || "（コメントなし）"}<br>
+      <small>${new Date(item.updatedAt).toLocaleString()}</small>
+    `;
+
+    // ★ サイドバークリック → ピンへズーム
+    div.onclick = () => {
+      const marker = markerMap[userId];
+      if (marker) {
+        map.panTo(marker.getPosition());
+        map.setZoom(17); // 好きなズームレベルに調整
+      }
+    };
+
+    sidebar.appendChild(div);
+  });
+}
+
 // =========================
 // 地図の初期化
 // =========================

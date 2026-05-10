@@ -1,9 +1,80 @@
-[
-  {
-    "id": "evt001",
-    "title": "ライブ参戦",
-    "start": "2026-05-20",
-    "lat": 35.648,
-    "lng": 140.034
+
+let pinColor = "red"; // デフォルト色
+
+fetch('events.json')
+  .then(res => res.json())
+  .then(events => {
+    if (events[eventId] && events[eventId].pinColor) {
+      pinColor = events[eventId].pinColor;
+    }
+  });
+function updateMap(data) {
+  Object.keys(data).forEach(userId => {
+    const item = data[userId];
+
+    const color = getUserColor(userId);
+
+    const marker = new google.maps.Marker({
+      position: { lat: item.lat, lng: item.lng },
+      map: map,
+      title: userId,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: "#333",
+        strokeWeight: 1
+      }
+    });
+
+    // ★ コメント表示（InfoWindow）
+    const info = new google.maps.InfoWindow({
+      content: `
+        <div style="font-size:14px;">
+          <strong>${userId}</strong><br>
+          ${item.comment || "（コメントなし）"}<br>
+          <small>${new Date(item.updatedAt).toLocaleString()}</small>
+        </div>
+      `
+    });
+
+    marker.addListener("click", () => {
+      info.open(map, marker);
+    });
+  });
+
+  // ★ コメント一覧の更新
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = ""; // 一旦クリア
+
+  Object.keys(data).forEach(userId => {
+    const item = data[userId];
+
+    const div = document.createElement("div");
+    div.className = "comment-item";
+
+    div.innerHTML = `
+      <strong>${userId}</strong><br>
+      ${item.comment || "（コメントなし）"}<br>
+      <small>${new Date(item.updatedAt).toLocaleString()}</small>
+    `;
+
+    sidebar.appendChild(div);
+  });
+}
+
+
+
+{
+  "evt001": {
+    "title": "ライブ1日目",
+    "date": "2025-05-01",
+    "pinColor": "red"
+  },
+  "evt002": {
+    "title": "ライブ2日目",
+    "date": "2025-05-02",
+    "pinColor": "blue"
   }
-]
+}

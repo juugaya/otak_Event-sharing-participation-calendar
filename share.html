@@ -25,10 +25,17 @@
 
 <button id="joinBtn">参加する</button>
 
-  <!-- 位置情報送信 -->
-<div class="location-block">
-  <button id="sendLocationBtn">現在地を送信</button>
-</div>
+window.location.href = `share.html?event=${eventId}`;
+
+const params = new URLSearchParams(window.location.search);
+const eventId = params.get('event') || 'default';
+
+firebase.database()
+  .ref(`comments/${eventId}/${userId}`)
+  .set({
+    lat, lng, comment, updatedAt: Date.now()
+  });
+
 
 </body>
 </html>
