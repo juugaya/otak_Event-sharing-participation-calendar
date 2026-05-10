@@ -1,3 +1,7 @@
+const markerMap = {}; // userId → marker
+const infoWindowMap = {}; // userId → InfoWindow（後で使う）
+
+
 // URL パラメータから eventId を取得
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get('event') || 'default';
@@ -59,6 +63,8 @@ function updateMap(data) {
       `
     });
 
+    infoWindowMap[userId] = info;
+
     marker.addListener("click", () => {
       info.open(map, marker);
     });
@@ -104,6 +110,20 @@ function updateSidebar(data) {
       <small>${new Date(item.updatedAt).toLocaleString()}</small>
     `;
 
+    // ★ クリックでピンへジャンプ
+    div.onclick = () => {
+      const marker = markerMap[userId];
+      const info = infoWindowMap[userId];
+
+      if (marker) {
+        map.panTo(marker.getPosition());
+        map.setZoom(17); // 好きなズーム値に調整
+
+        // InfoWindow も開く
+        info.open(map, marker);
+      }
+    };
+    
     // ★ サイドバークリック → ピンへズーム
     div.onclick = () => {
       const marker = markerMap[userId];
