@@ -13,12 +13,12 @@ firebase.database().ref(`events/${eventId}`).once("value")
     if (!evt) return;
 
     const select = document.getElementById("eventSelect");
-      select.innerHTML = `
+      select.innerHTML = 
       <option value="${eventId}" selected>${evt.title}</option>
-      `;
+      ;
 
       <option value="${eventId}">${evt.title}</option>
-    `;
+    ;
   });
 
 // 参加ボタン
@@ -65,6 +65,9 @@ document.getElementById("joinBtn").onclick = () => {
       alert("位置情報が取得できませんでした：" + err.message);
     }
   );
+};
+document.getElementById("mapBtn").onclick = () => {
+  window.location.href = `index.html?event=${eventId}`;
 };
 
 // ★ 戻るボタン（share.js の最後に置く）
