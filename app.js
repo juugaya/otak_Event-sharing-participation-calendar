@@ -1,60 +1,31 @@
-const infoWindowMap = {}; // userId → InfoWindow（後で使う）
-
-
-function getUserColor(userId) {
-  const colors = ['red', 'blue', 'green', 'orange', 'purple'];
-  const hash = userId.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-  return colors[hash % colors.length];
-}
+// =========================
+// 初期設定
+// =========================
 
 // URL パラメータから eventId を取得
 const params = new URLSearchParams(window.location.search);
-const eventId = params.get('event') || 'default';
-// ② イベントごとのピン色を読み込む
-let pinColor = "red"; // デフォルト色
-// ユーザーID → マーカー の対応表
-const markerMap = {};
+const eventId = params.get('event') || null;
+
+// Firebase DB（必ず最初に宣言）
 const db = firebase.database();
 
-db.ref(`events/${eventId}`).once("value").then(snapshot => {
-  const evt = snapshot.val();
-  if (evt && evt.pinColor) {
-    pinColor = evt.pinColor;
-  }
-});
+// ピン色（デフォルト）
+let pinColor = "red";
 
-
+// ユーザーID → マーカー
+let markerMap = {};
 
 console.log("Loaded event:", eventId);
 
-
-
-function updateSidebar(data) {
-  const sidebar = document.getElementById("sidebar");
-  sidebar.innerHTML = "";
-
-  Object.keys(data).forEach(userId => {
-    const item = data[userId];
-
-    const div = document.createElement("div");
-    div.className = "comment-item";
-
-    div.innerHTML = `
-      <strong>${userId}</strong><br>
-      ${item.comment || "（コメントなし）"}<br>
-      <small>${new Date(item.updatedAt).toLocaleString()}</small>
-    `;
-
-    // ★ クリックでピンへジャンプ
-    div.onclick = () => {
-      const marker = markerMap[userId];
-      if (marker) {
-        map.panTo(marker.getPosition());
-        map.setZoom(17); // 好きなズームレベルに調整
-      }
-    };
-
-    sidebar.appendChild(div);
+// =========================
+// イベント情報（ピン色）読み込み
+// =========================
+if (eventId) {
+  db.ref(`events/${eventId}`).once("value").then(snapshot => {
+    const evt = snapshot.val();
+    if (evt && evt.pinColor) {
+      pinColor = evt.pinColor;
+    }
   });
 }
 
@@ -67,7 +38,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19
 }).addTo(map);
 
-// 自分の現在地（距離・方角計算用）
+// 自分の現在地
 let myLat = null;
 let myLng = null;
 
@@ -79,7 +50,7 @@ if (navigator.geolocation) {
 }
 
 // =========================
-// ユーティリティ：距離・方角
+// ユーティリティ（距離・方角）
 // =========================
 function calcDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -116,19 +87,16 @@ function bearingToDirection(b) {
 }
 
 // =========================
-// ピンの色分け（ステータス＋到着）
+// ピンの色分け
 // =========================
 function iconByStatus(status, checkedIn) {
   let color = "blue";
 
-  if (checkedIn) {
-    color = "green"; // 到着チェックイン済み
-  } else {
-    if (status === "取込中") color = "orange";
-    else if (status === "トラブル") color = "red";
-    else if (status === "休憩中") color = "purple";
-    else if (status === "帰宅中") color = "grey";
-  }
+  if (checkedIn) color = "green";
+  else if (status === "取込中") color = "orange";
+  else if (status === "トラブル") color = "red";
+  else if (status === "休憩中") color = "purple";
+  else if (status === "帰宅中") color = "grey";
 
   return L.icon({
     iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
@@ -141,16 +109,9 @@ function iconByStatus(status, checkedIn) {
 }
 
 // =========================
-// 参加者ピン管理
+// Firebase：イベント一覧キャッシュ
 // =========================
-let markerMap = {};      // userId → marker
-let currentEventId = null; // 今フォーカスしているイベント（必要なら後で連動）
-
-// =========================
-// 予定データの読み込み（events.json）
-// =========================
-let eventsCache = [];
-
+let eventsCache = {};
 
 db.ref("events").once("value").then(snapshot => {
   eventsCache = snapshot.val() || {};
@@ -158,30 +119,26 @@ db.ref("events").once("value").then(snapshot => {
 });
 
 // =========================
-// 参加者データの購読
+// Firebase：参加者データ購読
 // =========================
 db.ref("participants").on("value", snapshot => {
   const allParticipants = snapshot.val() || {};
-  console.log("participants:", allParticipants);
 
-  // いったん全ピン削除
+  // ピン削除
   Object.values(markerMap).forEach(m => map.removeLayer(m));
   markerMap = {};
 
-  // 参加者一覧テキスト用
   const infoDiv = document.getElementById("info");
   infoDiv.innerHTML = "";
 
   // イベントごとに処理
-  Object.keys(allParticipants).forEach(eventId => {
-    const users = allParticipants[eventId];
-    const eventInfo = eventsCache.find(e => e.id === eventId);
+  Object.keys(allParticipants).forEach(eid => {
+    const users = allParticipants[eid];
+    const eventInfo = eventsCache[eid];
 
-    // 参加人数
     const count = Object.keys(users).length;
+    const evTitle = eventInfo ? eventInfo.title : eid;
 
-    // イベント情報表示（簡易）
-    const evTitle = eventInfo ? eventInfo.title : eventId;
     const evBlock = document.createElement("div");
     evBlock.innerHTML = `<h3>${evTitle}（${count}人）</h3>`;
     infoDiv.appendChild(evBlock);
@@ -191,7 +148,6 @@ db.ref("participants").on("value", snapshot => {
     Object.keys(users).forEach(userId => {
       const p = users[userId];
 
-      // 参加者一覧テキスト
       const li = document.createElement("li");
       li.innerHTML = `
         <strong>${p.name}</strong>
@@ -200,9 +156,6 @@ db.ref("participants").on("value", snapshot => {
         ／コメント：${p.comment || ""}
       `;
       ul.appendChild(li);
-
-      // 位置情報は comments 側にある前提なので、ここではまだピンを置かない
-      // → 下の comments 購読で実際のピンを置く
     });
 
     evBlock.appendChild(ul);
@@ -210,35 +163,30 @@ db.ref("participants").on("value", snapshot => {
 });
 
 // =========================
-// 位置共有データの購読（comments）
+// Firebase：位置情報（comments）購読
 // =========================
 db.ref("comments").on("value", snapshot => {
   const comments = snapshot.val() || {};
-  console.log("comments:", comments);
 
-  // いったん全ピン削除
+  // ピン削除
   Object.values(markerMap).forEach(m => map.removeLayer(m));
   markerMap = {};
 
   Object.keys(comments).forEach(userId => {
     const c = comments[userId];
 
-    // eventId が設定されている場合のみ表示（予定に紐づく人だけ）
-    const eventId = c.eventId || null;
-    if (!eventId) return;
+    const eid = c.eventId;
+    if (!eid) return;
 
     const lat = c.lat;
     const lng = c.lng;
     if (lat == null || lng == null) return;
 
-    // 参加者情報（checkedIn や status の補完用）
-    // なければ comments 側の status をそのまま使う
-    db.ref(`participants/${eventId}/${userId}`).once("value", snap => {
+    db.ref(`participants/${eid}/${userId}`).once("value", snap => {
       const p = snap.val() || {};
       const status = p.status || c.status || "不明";
       const checkedIn = !!p.checkedIn;
 
-      // 距離・方角
       let distText = "不明";
       let bearingText = "不明";
       let dirText = "不明";
