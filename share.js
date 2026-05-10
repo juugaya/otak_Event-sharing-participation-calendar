@@ -6,14 +6,13 @@ if (!eventId) {
   alert("イベントIDがありません。calendar からアクセスしてください。");
 }
 
-// イベント名を表示（任意）
+// イベント名を表示
 fetch("events.json")
   .then(res => res.json())
   .then(events => {
     const evt = events[eventId];
     if (!evt) return;
 
-    // プルダウンにイベント名を入れる
     const select = document.getElementById("eventSelect");
     select.innerHTML = `
       <option value="">選択してください</option>
@@ -35,14 +34,37 @@ document.getElementById("joinBtn").onclick = () => {
     return;
   }
 
-  // Firebase に書き込み
+  // まず参加登録
   firebase.database()
     .ref(`participants/${eventId}/${name}`)
     .set({
       status: "参加",
       updatedAt: Date.now()
-    })
-    .then(() => {
-      alert("参加を登録しました！");
     });
+
+  // ★ 位置情報を取得して comments に書き込む
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      firebase.database()
+        .ref(`comments/${eventId}/${name}`)
+        .set({
+          name: name,
+          lat: lat,
+          lng: lng,
+          status: "参加",
+          arrived: false,
+          comment: "",
+          updatedAt: Date.now()
+        })
+        .then(() => {
+          alert("参加登録＋位置情報を送信しました！");
+        });
+    },
+    (err) => {
+      alert("位置情報が取得できませんでした：" + err.message);
+    }
+  );
 };
