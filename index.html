@@ -37,15 +37,16 @@
   </div>
 
   <!-- ★ イベント選択時は地図モードに切り替える -->
-  <script>
-    // const params = new URLSearchParams(window.location.search);
-    // const eventId = params.get("event");
 
-    if (eventId) {
-      document.getElementById("event-list").style.display = "none";
-      document.getElementById("container").style.display = "flex";
-    }
-  </script>
+<script>
+  const params2 = new URLSearchParams(window.location.search);
+  const eventId2 = params2.get("event");
+
+  if (eventId2) {
+    document.getElementById("event-list").style.display = "none";
+    document.getElementById("container").style.display = "flex";
+  }
+</script>
 
   <div id="info"></div>
 
