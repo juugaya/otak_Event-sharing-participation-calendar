@@ -1,12 +1,10 @@
-<!-- Firebase v8 読み込み -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<!-- Firebase 設定 -->
-<script src="firebase.js"></script>
-
-<!-- 管理画面のJS（ここだけでOK） -->
-<script src="event-admin.js"></script>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>イベント管理</title>
+</head>
+<body>
 
 <h1>イベント管理</h1>
 
@@ -26,3 +24,16 @@
 
 <h2>イベント一覧</h2>
 <div id="eventList"></div>
+
+<!-- Firebase v8 読み込み -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<!-- Firebase 設定 -->
+<script src="firebase.js"></script>
+
+<!-- 管理画面のJS（ここで1回だけ読み込む） -->
+<script src="event-admin.js"></script>
+
+</body>
+</html>

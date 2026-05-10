@@ -1,23 +1,26 @@
-firebase.database().ref("events").once("value")
-  .then(snapshot => {
-    const events = snapshot.val();
-    const list = document.getElementById("event-list");
-    list.innerHTML = "";
+document.addEventListener("DOMContentLoaded", () => {
 
-    Object.keys(events).forEach(eventId => {
-      const evt = events[eventId];
+    const db = firebase.database();
 
-      const div = document.createElement("div");
-      div.className = "event-item";
-      div.textContent = `${evt.title}（${evt.date}）`;
+    // イベント一覧読み込み
+    db.ref("events").once("value").then(snapshot => {
+        const eventList = document.getElementById("event-list");
+        eventList.innerHTML = "";
 
-      div.onclick = () => {
-        window.location.href = `index.html?event=${eventId}`;
-      };
+        snapshot.forEach(child => {
+            const id = child.key;
+            const evt = child.val();
 
-      list.appendChild(div);
+            const div = document.createElement("div");
+            div.className = "event-item";
+            div.textContent = `${evt.title}（${evt.date}）`;
+
+            div.onclick = () => {
+                window.location.href = `index.html?event=${id}`;
+            };
+
+            eventList.appendChild(div);
+        });
     });
-  })
-  .catch(err => {
-    document.getElementById("event-list").textContent = "読み込みエラー";
-  });
+
+});
