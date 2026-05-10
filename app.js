@@ -14,6 +14,7 @@ const eventId = params.get('event') || 'default';
 let pinColor = "red"; // デフォルト色
 // ユーザーID → マーカー の対応表
 const markerMap = {};
+const db = firebase.database();
 
 db.ref(`events/${eventId}`).once("value").then(snapshot => {
   const evt = snapshot.val();
@@ -26,7 +27,6 @@ db.ref(`events/${eventId}`).once("value").then(snapshot => {
 
 console.log("Loaded event:", eventId);
 
-const db = firebase.database();
 
 
 function updateSidebar(data) {
