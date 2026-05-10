@@ -4,53 +4,62 @@
   <meta charset="UTF-8">
   <title>位置共有</title>
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="firebase.js"></script>
-  <script src="share.js" defer></script>
 
   <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <button id="backBtn" class="back-btn">
-  ← 推し活マップに戻る
-</button>
 
+  <style>
+    .back-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 9999;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    @media (max-width: 600px) {
+      .back-btn {
+        padding: 12px 18px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 戻るボタン -->
+  <button id="backBtn" class="back-btn">
+    ← 推し活マップに戻る
+  </button>
 
   <h1>位置共有</h1>
 
   <label>名前：</label>
   <input id="name" type="text">
 
+  <br><br>
+
   <label>参加する予定：</label>
   <select id="eventSelect">
     <option value="">選択してください</option>
   </select>
 
+  <br><br>
+
   <button id="joinBtn">参加する</button>
-<style>
-.back-btn {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 9999;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
 
-@media (max-width: 600px) {
-  .back-btn {
-    padding: 12px 18px;
-    font-size: 16px;
-  }
-}
-</style>
+  <!-- ★ 必ず HTML の後に読み込む -->
+  <script src="share.js"></script>
+
 </body>
-
-
 </html>
