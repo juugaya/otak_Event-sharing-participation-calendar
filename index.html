@@ -30,6 +30,10 @@
     イベント読み込み中…
   </div>
 
+  <button id="backBtn" style="position:absolute; top:10px; left:10px; z-index:9999;">
+  ← 推し活マップに戻る
+</button>
+
   <!-- ★ 地図モード（イベント選択時のみ表示） -->
   <div id="container" style="display:none;">
     <div id="sidebar"></div>
@@ -43,6 +47,12 @@
     document.getElementById("event-list").style.display = "none";
     document.getElementById("container").style.display = "flex";
   }
+
+  document.getElementById("backBtn").onclick = () => {
+    // event パラメータなしのトップへ戻る
+    window.location.href = "index.html";
+  };
+
 </script>
 
 
@@ -77,6 +87,29 @@
     .comment-item small {
       color: #666;
     }
+
+    .back-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* スマホ向けに大きめにする */
+@media (max-width: 600px) {
+  .back-btn {
+    padding: 12px 18px;
+    font-size: 16px;
+  }
+}
+
   </style>
 
 
