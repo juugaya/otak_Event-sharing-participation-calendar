@@ -122,6 +122,9 @@ db.ref("events").once("value").then(snapshot => {
 // Firebase：参加者データ購読
 // =========================
 db.ref("participants").on("value", snapshot => {
+  // ★ カレンダーモードなら参加者一覧を描画しない
+  if (!eventId) return;
+
   const allParticipants = snapshot.val() || {};
 
   // ピン削除
@@ -131,7 +134,6 @@ db.ref("participants").on("value", snapshot => {
   const infoDiv = document.getElementById("info");
   infoDiv.innerHTML = "";
 
-  // イベントごとに処理
   Object.keys(allParticipants).forEach(eid => {
     const users = allParticipants[eid];
     const eventInfo = eventsCache[eid];
@@ -162,10 +164,12 @@ db.ref("participants").on("value", snapshot => {
   });
 });
 
+
 // =========================
 // Firebase：位置情報（comments）購読
 // =========================
 db.ref("comments").on("value", snapshot => {
+  if (!eventId) return;  // ← 追加
   const comments = snapshot.val() || {};
 
   // ピン削除
