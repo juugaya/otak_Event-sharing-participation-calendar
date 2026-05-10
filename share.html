@@ -13,29 +13,17 @@
 </head>
 <body>
 
-<h1>位置共有</h1>
+  <h1>位置共有</h1>
 
-<label>名前：</label>
-<input id="name" type="text">
+  <label>名前：</label>
+  <input id="name" type="text">
 
-<label>参加する予定：</label>
-<select id="eventSelect">
-  <option value="">選択してください</option>
-</select>
+  <label>参加する予定：</label>
+  <select id="eventSelect">
+    <option value="">選択してください</option>
+  </select>
 
-<button id="joinBtn">参加する</button>
-
-window.location.href = `share.html?event=${eventId}`;
-
-const params = new URLSearchParams(window.location.search);
-const eventId = params.get('event') || 'default';
-
-firebase.database()
-  .ref(`comments/${eventId}/${userId}`)
-  .set({
-    lat, lng, comment, updatedAt: Date.now()
-  });
-
+  <button id="joinBtn">参加する</button>
 
 </body>
 </html>
