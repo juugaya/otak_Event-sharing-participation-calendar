@@ -6,11 +6,10 @@ if (!eventId) {
   alert("イベントIDがありません。calendar からアクセスしてください。");
 }
 
-// イベント名を表示
-fetch("events.json")
-  .then(res => res.json())
-  .then(events => {
-    const evt = events[eventId];
+// Firebase からイベント名を取得
+firebase.database().ref(`events/${eventId}`).once("value")
+  .then(snapshot => {
+    const evt = snapshot.val();
     if (!evt) return;
 
     const select = document.getElementById("eventSelect");
@@ -34,7 +33,7 @@ document.getElementById("joinBtn").onclick = () => {
     return;
   }
 
-  // まず参加登録
+  // 参加登録
   firebase.database()
     .ref(`participants/${eventId}/${name}`)
     .set({
@@ -42,18 +41,15 @@ document.getElementById("joinBtn").onclick = () => {
       updatedAt: Date.now()
     });
 
-  // ★ 位置情報を取得して comments に書き込む
+  // 位置情報送信
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-
       firebase.database()
         .ref(`comments/${eventId}/${name}`)
         .set({
           name: name,
-          lat: lat,
-          lng: lng,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
           status: "参加",
           arrived: false,
           comment: "",
@@ -68,8 +64,3 @@ document.getElementById("joinBtn").onclick = () => {
     }
   );
 };
-<script>
-  document.getElementById("backBtn").onclick = () => {
-    window.location.href = "index.html";
-  };
-</script>
