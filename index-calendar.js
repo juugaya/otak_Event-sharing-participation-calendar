@@ -1,6 +1,3 @@
-// index-calendar.js
-
-// events.json を読み込んで一覧を生成
 fetch('events.json')
   .then(res => res.json())
   .then(events => {
@@ -22,7 +19,6 @@ fetch('events.json')
       `;
       div.textContent = `${evt.title}（${evt.date}）`;
 
-      // ★ クリックで地図画面へ
       div.onclick = () => {
         window.location.href = `index.html?event=${eventId}`;
       };
