@@ -6,7 +6,7 @@ if (!eventId) {
   alert("イベントIDがありません。calendar からアクセスしてください。");
 }
 
-// Firebase からイベント名を取得
+// ★ Firebase からイベント名を取得（ここが重要）
 firebase.database().ref(`events/${eventId}`).once("value")
   .then(snapshot => {
     const evt = snapshot.val();
