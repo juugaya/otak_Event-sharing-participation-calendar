@@ -1,6 +1,11 @@
-const markerMap = {}; // userId → marker
 const infoWindowMap = {}; // userId → InfoWindow（後で使う）
 
+
+function getUserColor(userId) {
+  const colors = ['red', 'blue', 'green', 'orange', 'purple'];
+  const hash = userId.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+}
 
 // URL パラメータから eventId を取得
 const params = new URLSearchParams(window.location.search);
@@ -21,77 +26,7 @@ fetch('events.json')
 
 console.log("Loaded event:", eventId);
 
-firebase.database()
-  .ref(`comments/${eventId}`)
-  .on('value', snapshot => {
-    const data = snapshot.val() || {};
-    updateMap(data);
-  });
-
-
-function updateMap(data) {
-  Object.keys(data).forEach(userId => {
-    const item = data[userId];
-
-    const color = getUserColor(userId);
-
-    const marker = new google.maps.Marker({
-      position: { lat: item.lat, lng: item.lng },
-      map: map,
-      title: userId,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: color,
-        fillOpacity: 1,
-        strokeColor: "#333",
-        strokeWeight: 1
-      }
-    });
-
-    // ★ マーカーを保存
-    markerMap[userId] = marker;
-
-    // ★ コメント表示（InfoWindow）
-    const info = new google.maps.InfoWindow({
-      content: `
-        <div style="font-size:14px;">
-          <strong>${userId}</strong><br>
-          ${item.comment || "（コメントなし）"}<br>
-          <small>${new Date(item.updatedAt).toLocaleString()}</small>
-        </div>
-      `
-    });
-
-    infoWindowMap[userId] = info;
-
-    marker.addListener("click", () => {
-      info.open(map, marker);
-    });
-  });
-
-  // ★ コメント一覧の更新（次のステップで拡張）
-  updateSidebar(data);
-
-  // ★ コメント一覧の更新
-  const sidebar = document.getElementById("sidebar");
-  sidebar.innerHTML = ""; // 一旦クリア
-
-  Object.keys(data).forEach(userId => {
-    const item = data[userId];
-
-    const div = document.createElement("div");
-    div.className = "comment-item";
-
-    div.innerHTML = `
-      <strong>${userId}</strong><br>
-      ${item.comment || "（コメントなし）"}<br>
-      <small>${new Date(item.updatedAt).toLocaleString()}</small>
-    `;
-
-    sidebar.appendChild(div);
-  });
-}
+const db = firebase.database();
 
 
 function updateSidebar(data) {
@@ -111,20 +46,6 @@ function updateSidebar(data) {
     `;
 
     // ★ クリックでピンへジャンプ
-    div.onclick = () => {
-      const marker = markerMap[userId];
-      const info = infoWindowMap[userId];
-
-      if (marker) {
-        map.panTo(marker.getPosition());
-        map.setZoom(17); // 好きなズーム値に調整
-
-        // InfoWindow も開く
-        info.open(map, marker);
-      }
-    };
-    
-    // ★ サイドバークリック → ピンへズーム
     div.onclick = () => {
       const marker = markerMap[userId];
       if (marker) {
@@ -222,7 +143,7 @@ function iconByStatus(status, checkedIn) {
 // =========================
 // 参加者ピン管理
 // =========================
-let markers = {};      // userId → marker
+let markerMap = {};      // userId → marker
 let currentEventId = null; // 今フォーカスしているイベント（必要なら後で連動）
 
 // =========================
@@ -246,8 +167,8 @@ db.ref("participants").on("value", snapshot => {
   console.log("participants:", allParticipants);
 
   // いったん全ピン削除
-  Object.values(markers).forEach(m => map.removeLayer(m));
-  markers = {};
+  Object.values(markerMap).forEach(m => map.removeLayer(m));
+  markerMap = {};
 
   // 参加者一覧テキスト用
   const infoDiv = document.getElementById("info");
@@ -298,8 +219,8 @@ db.ref("comments").on("value", snapshot => {
   console.log("comments:", comments);
 
   // いったん全ピン削除
-  Object.values(markers).forEach(m => map.removeLayer(m));
-  markers = {};
+  Object.values(markerMap).forEach(m => map.removeLayer(m));
+  markerMap = {};
 
   Object.keys(comments).forEach(userId => {
     const c = comments[userId];
@@ -347,7 +268,7 @@ db.ref("comments").on("value", snapshot => {
       }).addTo(map);
 
       marker.bindPopup(popupHtml);
-      markers[userId] = marker;
+      markerMap[userId] = marker;
     });
   });
 });
