@@ -13,8 +13,10 @@ firebase.database().ref(`events/${eventId}`).once("value")
     if (!evt) return;
 
     const select = document.getElementById("eventSelect");
-    select.innerHTML = `
-      <option value="">選択してください</option>
+      select.innerHTML = `
+      <option value="${eventId}" selected>${evt.title}</option>
+      `;
+
       <option value="${eventId}">${evt.title}</option>
     `;
   });
