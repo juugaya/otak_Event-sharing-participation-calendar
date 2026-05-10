@@ -15,8 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
             div.className = "event-item";
             div.textContent = `${evt.title}（${evt.date}）`;
 
+            // ★ ここを修正！
             div.onclick = () => {
-                window.location.href = `index.html?event=${id}`;
+                window.location.href = `share.html?event=${id}`;
             };
 
             eventList.appendChild(div);
