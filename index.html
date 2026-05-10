@@ -28,15 +28,7 @@
 <div style="max-width:200px; white-space:normal;">
 
 <div id="map" style="height: 400px;"></div>
-const params = new URLSearchParams(window.location.search);
-const eventId = params.get('event') || 'default';
 
-firebase.database()
-  .ref(`comments/${eventId}`)
-  .on('value', snapshot => {
-    const data = snapshot.val();
-    updateMap(data);
-  });
 
 </body>
 <body>
