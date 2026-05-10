@@ -64,3 +64,8 @@ document.getElementById("joinBtn").onclick = () => {
     }
   );
 };
+
+// ★ 戻るボタン（share.js の最後に置く）
+document.getElementById("backBtn").onclick = () => {
+  window.location.href = "index.html";
+};
