@@ -17,6 +17,12 @@ let markerMap = {};
 
 console.log("Loaded event:", eventId);
 
+
+
+
+
+
+
 // =========================
 // イベント情報（ピン色）読み込み
 // =========================
@@ -30,13 +36,18 @@ if (eventId) {
 }
 
 // =========================
-// 地図の初期化
+// 地図の初期化（★ eventId があるときだけ）
 // =========================
-const map = L.map('map').setView([35.0, 135.0], 6);
+let map = null;
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19
-}).addTo(map);
+if (eventId) {
+  map = L.map('map').setView([35.0, 135.0], 6);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(map);
+}
+
 
 // 自分の現在地
 let myLat = null;
@@ -127,9 +138,12 @@ db.ref("participants").on("value", snapshot => {
 
   const allParticipants = snapshot.val() || {};
 
-  // ピン削除
+// ピン削除（★ map が null のときはスキップ）
+if (map) {
   Object.values(markerMap).forEach(m => map.removeLayer(m));
-  markerMap = {};
+}
+markerMap = {};
+
 
   const infoDiv = document.getElementById("info");
   infoDiv.innerHTML = "";
@@ -170,6 +184,7 @@ db.ref("participants").on("value", snapshot => {
 // =========================
 db.ref("comments").on("value", snapshot => {
   if (!eventId) return;  // ← 追加
+  
   const comments = snapshot.val() || {};
 
   // ピン削除
