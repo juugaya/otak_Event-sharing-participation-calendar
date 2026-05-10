@@ -213,6 +213,31 @@ db.ref("comments").on("value", snapshot => {
         icon: iconByStatus(status, checkedIn)
       }).addTo(map);
 
+      // ★ ピンをクリックしたら中央寄せ
+       marker.on("click", () => {
+       map.flyTo([lat, lng], 17, {
+       animate: true,
+       duration: 0.6
+       });
+      });
+      // ★ ポップアップ
+      marker.bindPopup(popupHtml);
+      // ★ マーカー管理
+      markerMap[userId] = marker;
+
+      marker.bindPopup(popupHtml, {
+        autoPan: true,
+        autoPanPadding: [50, 50]
+      });
+
+      marker.on("click", () => {
+        map.flyTo([lat, lng], 17, {
+          animate: true,
+          duration: 0.5
+        });
+      });
+
+
       marker.bindPopup(popupHtml);
       markerMap[userId] = marker;
     });
