@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // ★ ここを修正！
             div.onclick = () => {
                 window.location.href = `share.html?event=${id}`;
+
             };
 
             eventList.appendChild(div);

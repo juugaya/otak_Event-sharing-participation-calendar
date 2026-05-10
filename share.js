@@ -68,3 +68,8 @@ document.getElementById("joinBtn").onclick = () => {
     }
   );
 };
+<script>
+  document.getElementById("backBtn").onclick = () => {
+    window.location.href = "index.html";
+  };
+</script>
