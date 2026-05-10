@@ -8,16 +8,15 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- Firebase -->
+  <!-- Firebase v8 読み込み -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="firebase.js"></script>
-  <script src="index-calendar.js"></script>
 
   <!-- カレンダー表示用 -->
   <script src="index-calendar.js" defer></script>
 
-  <!-- 地図アプリ本体（イベント選択時のみ動く） -->
+  <!-- 地図アプリ本体 -->
   <script src="app.js" defer></script>
 
   <link rel="stylesheet" href="style.css">
@@ -75,14 +74,12 @@
     const eventId = params.get("event");
 
     if (eventId) {
-      // カレンダー非表示
       document.getElementById("event-list").style.display = "none";
-      // 地図モード表示
       document.getElementById("container").style.display = "flex";
     }
   </script>
 
-<script src="mode-switch.js" defer></script>
+  <script src="mode-switch.js" defer></script>
 
 </body>
 </html>
