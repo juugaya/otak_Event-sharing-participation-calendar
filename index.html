@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>推し活マップ</title>
+  <title>推し活動リスト</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
@@ -18,17 +18,29 @@
 
   <!-- 地図アプリ本体 -->
   <script src="app.js" defer></script>
-  <script>
-  item.onclick = () => {
-  window.location.href = `share.html?event=${eventId}`;
-};
-</script>
 
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <h1>推し活マップ</h1>
+  <h1>推し活動リスト</h1>
+  <button id="adminBtn" style="position: fixed; top: 12px; right: 12px; z-index: 9999; padding: 10px 14px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ccc; border-radius: 8px; cursor: pointer;">
+    ⚙️ イベント管理
+  </button>
+
+  <!-- ★ カレンダー表示 -->
+  <div id="calendarSection" class="calendar-section" style="padding: 20px;">
+    <h2>イベントカレンダー</h2>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px;">
+      <button id="prevMonthBtn" class="calendar-button" style="background: #3498db; color: white;">◀ 前の月</button>
+      <button id="nextMonthBtn" class="calendar-button" style="background: #3498db; color: white;">次の月 ▶</button>
+      <button id="shareEventBtn" class="calendar-button" style="background: #1DA1F2; color: white;">🕊️ 選択イベントをXで共有</button>
+    </div>
+    <div id="calendarMonth" style="margin-bottom: 10px; font-weight: bold;">読み込み中...</div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+    <div id="calendarStatus" style="margin-top: 10px; color: #666;"></div>
+    <button id="addCalendarBtn" class="calendar-button" style="margin-top: 10px; background: #8E44AD; color: white;">📥 カレンダーに追加</button>
+  </div>
 
   <!-- ★ イベント一覧（カレンダー） -->
   <div id="event-list" style="padding: 20px;">
@@ -37,8 +49,8 @@
 
 
   <button id="backBtn" class="back-btn">
-    ← 推し活マップに戻る
-  </button>
+  ← 推し活動リストに戻る
+</button>
 
   <!-- ★ 地図モード（イベント選択時のみ表示） -->
   <div id="container" style="display:none;">
@@ -48,15 +60,23 @@
 
   <!-- ★ イベント選択時は地図モードに切り替える -->
 
-  <script>
-    if (location.search.includes("event=")) {
-      document.getElementById("event-list").style.display = "none";
-      document.getElementById("container").style.display = "flex";
-    }
+<script>
+  if (location.search.includes("event=")) {
+    document.getElementById("event-list").style.display = "none";
+    document.getElementById("container").style.display = "flex";
+  }
 
-    document.getElementById("backBtn").onclick = () => {
-      // event パラメータなしのトップへ戻る
-      window.location.href = "index.html";
+  document.getElementById("backBtn").onclick = () => {
+    // event パラメータなしのトップへ戻る
+    window.location.href = "index.html";
+  };
+
+</script>
+
+
+  <script>
+    document.getElementById("adminBtn").onclick = () => {
+      window.location.href = "event-admin.html";
     };
   </script>
 
@@ -78,6 +98,73 @@
       flex: 1;
       height: 100vh;   /* ★ これがないと地図は表示されない */
     }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .calendar-cell {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9f9f9;
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: pre-line;
+      text-align: center;
+      cursor: default;
+    }
+    .calendar-cell.event {
+      cursor: pointer;
+      background: #eef9ff;
+      border: 1px solid #b3dffa;
+    }
+    .calendar-cell.event:hover {
+      background: #d4f0ff;
+    }
+    .calendar-cell.header {
+      background: #e8f4ff;
+      font-weight: bold;
+      color: #333;
+    }
+    .calendar-cell.active {
+      background: #ffeaa7;
+      border: 2px solid #f1c40f;
+      font-weight: bold;
+    }
+    .calendar-button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .calendar-cell {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9f9f9;
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: pre-line;
+      text-align: center;
+    }
+    .calendar-cell.header {
+      background: #e8f4ff;
+      font-weight: bold;
+      color: #333;
+    }
+    .calendar-cell.active {
+      background: #ffeaa7;
+      border: 2px solid #f1c40f;
+      font-weight: bold;
+    }
     .comment-item {
       padding: 8px;
       margin-bottom: 8px;
@@ -93,27 +180,29 @@
     }
 
     .back-btn {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 9999;
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.9);
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
 
-    /* スマホ向けに大きめにする */
-    @media (max-width: 600px) {
-      .back-btn {
-        padding: 12px 18px;
-        font-size: 16px;
-      }
-    }
+/* スマホ向けに大きめにする */
+@media (max-width: 600px) {
+  .back-btn {
+    padding: 12px 18px;
+    font-size: 16px;
+  }
+}
+
   </style>
+
 
   <script src="mode-switch.js" defer></script>
 

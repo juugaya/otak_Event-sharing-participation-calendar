@@ -2,6 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const db = firebase.database();
 
+    document.getElementById("backBtn").onclick = () => {
+        window.location.href = "index.html";
+    };
+
     // 新規登録
     document.getElementById("saveBtn").onclick = () => {
         const id = document.getElementById("eventId").value;
@@ -22,6 +26,15 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("保存が完了しました");
             loadEvents();
         });
+    };
+
+    document.getElementById("shareBtn").onclick = () => {
+        const id = document.getElementById("eventId").value;
+        if (!id) {
+            alert("イベントIDを入力してください。");
+            return;
+        }
+        window.location.href = `share.html?event=${encodeURIComponent(id)}`;
     };
 
     // イベント一覧読み込み

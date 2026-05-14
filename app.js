@@ -46,6 +46,13 @@ if (eventId) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19
   }).addTo(map);
+
+  // 非表示状態から表示された後でも Leaflet が正しく描画されるようにする
+  setTimeout(() => {
+    if (map) {
+      map.invalidateSize();
+    }
+  }, 100);
 }
 
 
@@ -132,133 +139,276 @@ db.ref("events").once("value").then(snapshot => {
 // =========================
 // Firebase：参加者データ購読
 // =========================
-db.ref("participants").on("value", snapshot => {
-  // ★ カレンダーモードなら参加者一覧を描画しない
-  if (!eventId) return;
+if (eventId) {
+  db.ref(`participants/${eventId}`).on("value", snapshot => {
+    const users = snapshot.val() || {};
 
-  const allParticipants = snapshot.val() || {};
+    // ピン削除（★ map が null のときはスキップ）
+    if (map) {
+      Object.values(markerMap).forEach(m => map.removeLayer(m));
+    }
+    markerMap = {};
 
-// ピン削除（★ map が null のときはスキップ）
-if (map) {
-  Object.values(markerMap).forEach(m => map.removeLayer(m));
-}
-markerMap = {};
+    const infoDiv = document.getElementById("info");
+    infoDiv.innerHTML = "";
 
-
-  const infoDiv = document.getElementById("info");
-  infoDiv.innerHTML = "";
-
-  Object.keys(allParticipants).forEach(eid => {
-    const users = allParticipants[eid];
-    const eventInfo = eventsCache[eid];
-
-    const count = Object.keys(users).length;
-    const evTitle = eventInfo ? eventInfo.title : eid;
+    const eventInfo = eventsCache[eventId];
+    const evTitle = eventInfo ? eventInfo.title : eventId;
 
     const evBlock = document.createElement("div");
-    evBlock.innerHTML = `<h3>${evTitle}（${count}人）</h3>`;
+    evBlock.innerHTML = `<h3>${evTitle}（${Object.keys(users).length}人）</h3>`;
     infoDiv.appendChild(evBlock);
 
     const ul = document.createElement("ul");
 
-    Object.keys(users).forEach(userId => {
-      const p = users[userId];
+    Object.keys(users).forEach(userName => {
+      const p = users[userName];
 
       const li = document.createElement("li");
-      li.innerHTML = `
-        <strong>${p.name}</strong>
-        ／ステータス：${p.status || "-"}
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
+      li.style.alignItems = "center";
+      li.style.marginBottom = "8px";
+      li.style.padding = "8px";
+      li.style.backgroundColor = "#f9f9f9";
+      li.style.borderRadius = "4px";
+
+      const infoSpan = document.createElement("span");
+      const statusText = p.status || "-";
+      const commentText = "";
+      infoSpan.innerHTML = `
+        <strong>${userName}</strong>
+        ／ステータス：${statusText}
         ／到着：${p.checkedIn ? "✔" : "未到着"}
-        ／コメント：${p.comment || ""}
+        ／コメント：${commentText}
       `;
+
+      db.ref(`comments/${eventId}/${userName}`).once("value").then(commentSnap => {
+        const commentData = commentSnap.val() || {};
+        const displayedStatus = commentData.status || statusText;
+        const displayedComment = commentData.comment || "";
+        infoSpan.innerHTML = `
+          <strong>${userName}</strong>
+          ／ステータス：${displayedStatus}
+          ／到着：${p.checkedIn ? "✔" : "未到着"}
+          ／コメント：${displayedComment}
+        `;
+        statusInput.value = displayedStatus;
+        commentInput.value = displayedComment;
+      });
+
+      const viewBtn = document.createElement("button");
+      viewBtn.textContent = "📍 ピンを表示";
+      viewBtn.style.padding = "6px 12px";
+      viewBtn.style.fontSize = "12px";
+      viewBtn.style.cursor = "pointer";
+      viewBtn.style.backgroundColor = "#4CAF50";
+      viewBtn.style.color = "white";
+      viewBtn.style.border = "none";
+      viewBtn.style.borderRadius = "4px";
+      viewBtn.style.whiteSpace = "nowrap";
+      viewBtn.style.marginRight = "6px";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "✏️ 編集";
+      editBtn.style.padding = "6px 12px";
+      editBtn.style.fontSize = "12px";
+      editBtn.style.cursor = "pointer";
+      editBtn.style.backgroundColor = "#2196F3";
+      editBtn.style.color = "white";
+      editBtn.style.border = "none";
+      editBtn.style.borderRadius = "4px";
+      editBtn.style.whiteSpace = "nowrap";
+
+      const editForm = document.createElement("div");
+      editForm.style.display = "none";
+      editForm.style.marginTop = "10px";
+      editForm.style.padding = "10px";
+      editForm.style.background = "#ffffff";
+      editForm.style.border = "1px solid #ddd";
+      editForm.style.borderRadius = "6px";
+      editForm.style.width = "100%";
+
+      const statusInput = document.createElement("input");
+      statusInput.type = "text";
+      statusInput.placeholder = "ステータス";
+      statusInput.value = p.status || "";
+      statusInput.style.marginRight = "8px";
+      statusInput.style.padding = "6px 8px";
+      statusInput.style.width = "140px";
+
+      const commentInput = document.createElement("input");
+      commentInput.type = "text";
+      commentInput.placeholder = "コメント";
+      commentInput.value = p.comment || "";
+      commentInput.style.padding = "6px 8px";
+      commentInput.style.width = "220px";
+      commentInput.style.marginRight = "8px";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.textContent = "保存";
+      saveBtn.style.padding = "6px 12px";
+      saveBtn.style.fontSize = "12px";
+      saveBtn.style.cursor = "pointer";
+      saveBtn.style.backgroundColor = "#4CAF50";
+      saveBtn.style.color = "white";
+      saveBtn.style.border = "none";
+      saveBtn.style.borderRadius = "4px";
+      saveBtn.style.whiteSpace = "nowrap";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "キャンセル";
+      cancelBtn.style.padding = "6px 12px";
+      cancelBtn.style.fontSize = "12px";
+      cancelBtn.style.cursor = "pointer";
+      cancelBtn.style.backgroundColor = "#9E9E9E";
+      cancelBtn.style.color = "white";
+      cancelBtn.style.border = "none";
+      cancelBtn.style.borderRadius = "4px";
+      cancelBtn.style.whiteSpace = "nowrap";
+
+      editForm.appendChild(statusInput);
+      editForm.appendChild(commentInput);
+      editForm.appendChild(saveBtn);
+      editForm.appendChild(cancelBtn);
+
+      editBtn.onclick = () => {
+        editForm.style.display = editForm.style.display === "none" ? "block" : "none";
+      };
+
+      cancelBtn.onclick = () => {
+        editForm.style.display = "none";
+      };
+
+      saveBtn.onclick = () => {
+        const newStatus = statusInput.value.trim();
+        const newComment = commentInput.value.trim();
+
+        db.ref(`participants/${eventId}/${userName}`).update({
+          status: newStatus || "参加"
+        });
+
+        db.ref(`comments/${eventId}/${userName}`).update({
+          status: newStatus || "参加",
+          comment: newComment,
+          updatedAt: Date.now()
+        }).then(() => {
+          infoSpan.innerHTML = `
+            <strong>${userName}</strong>
+            ／ステータス：${newStatus || "参加"}
+            ／到着：${p.checkedIn ? "✔" : "未到着"}
+            ／コメント：${newComment}
+          `;
+          alert("コメントとステータスを保存しました。");
+          editForm.style.display = "none";
+        });
+      };
+
+      viewBtn.onclick = () => {
+        if (markerMap[userName]) {
+          const marker = markerMap[userName];
+          if (map) {
+            map.flyTo(marker.getLatLng(), 17, {
+              animate: true,
+              duration: 0.6
+            });
+            marker.openPopup();
+          }
+        } else {
+          // comments データから直接取得
+          db.ref(`comments/${eventId}/${userName}`).once("value", snap => {
+            const c = snap.val();
+            if (c && c.lat != null && c.lng != null && map) {
+              map.flyTo([c.lat, c.lng], 17, {
+                animate: true,
+                duration: 0.6
+              });
+            }
+          });
+        }
+      };
+
+      li.appendChild(infoSpan);
+      const btnGroup = document.createElement("div");
+      btnGroup.style.display = "flex";
+      btnGroup.style.alignItems = "center";
+      btnGroup.appendChild(viewBtn);
+      btnGroup.appendChild(editBtn);
+      li.appendChild(btnGroup);
+      li.appendChild(editForm);
       ul.appendChild(li);
     });
 
     evBlock.appendChild(ul);
   });
-});
+}
 
 
 // =========================
 // Firebase：位置情報（comments）購読
 // =========================
-db.ref("comments").on("value", snapshot => {
-  if (!eventId) return;  // ← 追加
-  
-  const comments = snapshot.val() || {};
+if (eventId) {
+  db.ref(`comments/${eventId}`).on("value", snapshot => {
+    const comments = snapshot.val() || {};
 
-  // ピン削除
-  Object.values(markerMap).forEach(m => map.removeLayer(m));
-  markerMap = {};
+    // ピン削除
+    if (map) {
+      Object.values(markerMap).forEach(m => map.removeLayer(m));
+    }
+    markerMap = {};
 
-  Object.keys(comments).forEach(userId => {
-    const c = comments[userId];
+    Object.keys(comments).forEach(userName => {
+      const c = comments[userName];
 
-    const eid = c.eventId;
-    if (!eid) return;
+      const lat = c.lat;
+      const lng = c.lng;
+      if (lat == null || lng == null) return;
 
-    const lat = c.lat;
-    const lng = c.lng;
-    if (lat == null || lng == null) return;
+      db.ref(`participants/${eventId}/${userName}`).once("value", snap => {
+        const p = snap.val() || {};
+        const status = p.status || c.status || "不明";
+        const checkedIn = !!p.checkedIn;
 
-    db.ref(`participants/${eid}/${userId}`).once("value", snap => {
-      const p = snap.val() || {};
-      const status = p.status || c.status || "不明";
-      const checkedIn = !!p.checkedIn;
+        let distText = "不明";
+        let bearingText = "不明";
+        let dirText = "不明";
 
-      let distText = "不明";
-      let bearingText = "不明";
-      let dirText = "不明";
+        if (myLat != null && myLng != null) {
+          const dist = calcDistance(myLat, myLng, lat, lng);
+          const bearing = calcBearing(myLat, myLng, lat, lng);
+          distText = dist.toFixed(2) + " km";
+          bearingText = bearing.toFixed(0) + "°";
+          dirText = bearingToDirection(bearing);
+        }
 
-      if (myLat != null && myLng != null) {
-        const dist = calcDistance(myLat, myLng, lat, lng);
-        const bearing = calcBearing(myLat, myLng, lat, lng);
-        distText = dist.toFixed(2) + " km";
-        bearingText = bearing.toFixed(0) + "°";
-        dirText = bearingToDirection(bearing);
-      }
+        const popupHtml = `
+          <strong>${c.name}</strong><br>
+          ステータス：${status}<br>
+          コメント：${c.comment || ""}<br>
+          到着：${checkedIn ? "✔" : "未到着"}<br>
+          距離：${distText}<br>
+          方角：${dirText}（${bearingText}）<br>
+          更新：${c.time || "-"}
+        `;
 
-      const popupHtml = `
-        <strong>${c.name}</strong><br>
-        ステータス：${status}<br>
-        コメント：${c.comment || ""}<br>
-        到着：${checkedIn ? "✔" : "未到着"}<br>
-        距離：${distText}<br>
-        方角：${dirText}（${bearingText}）<br>
-        更新：${c.time || "-"}
-      `;
+        const marker = L.marker([lat, lng], {
+          icon: iconByStatus(status, checkedIn)
+        }).addTo(map);
 
-      const marker = L.marker([lat, lng], {
-        icon: iconByStatus(status, checkedIn)
-      }).addTo(map);
-
-      // ★ ピンをクリックしたら中央寄せ
-       marker.on("click", () => {
-       map.flyTo([lat, lng], 17, {
-       animate: true,
-       duration: 0.6
-       });
-      });
-      // ★ ポップアップ
-      marker.bindPopup(popupHtml);
-      // ★ マーカー管理
-      markerMap[userId] = marker;
-
-      marker.bindPopup(popupHtml, {
-        autoPan: true,
-        autoPanPadding: [50, 50]
-      });
-
-      marker.on("click", () => {
-        map.flyTo([lat, lng], 17, {
-          animate: true,
-          duration: 0.5
+        marker.bindPopup(popupHtml, {
+          autoPan: true,
+          autoPanPadding: [50, 50]
         });
+
+        marker.on("click", () => {
+          map.flyTo([lat, lng], 17, {
+            animate: true,
+            duration: 0.5
+          });
+        });
+
+        markerMap[userName] = marker;
       });
-
-
-      marker.bindPopup(popupHtml);
-      markerMap[userId] = marker;
     });
   });
-});
+}
