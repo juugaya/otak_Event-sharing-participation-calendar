@@ -90,7 +90,8 @@
           const currentEvents = typeof loadEvents === 'function' ? loadEvents() : [];
           const jsonString = JSON.stringify(currentEvents);
           const encodedData = btoa(encodeURIComponent(jsonString));
-          const shareUrl = `${window.location.origin}${window.location.pathname}?user=${currentUser}&data=${encodedData}`;
+          const baseUrl = `https://juugaya.github.io/otak_Event-sharing-participation-calendar/index.html`;
+          const shareUrl = `${baseUrl}?user=${currentUser}&data=${encodedData}`
           const tweetText = encodeURIComponent(`${currentUser}のイベントカレンダーを共有します！ #推し活動リスト`);
           const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
           window.open(xUrl, '_blank');
