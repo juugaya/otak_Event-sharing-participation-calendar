@@ -34,12 +34,13 @@
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px;">
       <button id="prevMonthBtn" class="calendar-button" style="background: #3498db; color: white;">◀ 前の月</button>
       <button id="nextMonthBtn" class="calendar-button" style="background: #3498db; color: white;">次の月 ▶</button>
-      <button id="shareEventBtn" class="calendar-button" style="background: #1DA1F2; color: white;">🕊️ 選択イベントをXで共有</button>
+      <button id="shareEventBtn" class="calendar-button" style="background: #1DA1F2; color: white;">🕊️ この画面をXで共有</button>
+      <button id="goAdminBtn" class="calendar-button" style="background: #8E44AD; color: white;">🛠️ イベント管理へ</button>
     </div>
     <div id="calendarMonth" style="margin-bottom: 10px; font-weight: bold;">読み込み中...</div>
     <div id="calendarGrid" class="calendar-grid"></div>
     <div id="calendarStatus" style="margin-top: 10px; color: #666;"></div>
-    <button id="addCalendarBtn" class="calendar-button" style="margin-top: 10px; background: #8E44AD; color: white;">📥 カレンダーに追加</button>
+    <!-- <button id="addCalendarBtn" class="calendar-button" style="margin-top: 10px; background: #8E44AD; color: white;">📥 カレンダーに追加</button> -->
   </div>
 
   <!-- ★ イベント一覧（カレンダー） -->
@@ -78,6 +79,12 @@
     document.getElementById("adminBtn").onclick = () => {
       window.location.href = "event-admin.html";
     };
+    const goAdminBtn = document.getElementById("goAdminBtn");
+    if (goAdminBtn) {
+      goAdminBtn.onclick = () => {
+        window.location.href = "event-admin.html";
+      };
+    }
   </script>
 
   <div id="info"></div>
@@ -198,6 +205,69 @@
   .back-btn {
     padding: 12px 18px;
     font-size: 16px;
+  }
+}
+
+/* モバイル表示対応 */
+@media (max-width: 900px) {
+  #calendarSection {
+    padding: 12px;
+  }
+  #calendarSection h2 {
+    font-size: 1.4rem;
+  }
+  .calendar-grid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+  .calendar-grid::after {
+    content: '';
+    display: block;
+    width: 12px;
+  }
+  .calendar-cell {
+    min-width: 100px;
+  }
+  .calendar-button {
+    width: 100%;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(100px, 1fr));
+  }
+  .calendar-cell {
+    min-height: 70px;
+    font-size: 12px;
+    padding: 8px;
+  }
+  .calendar-cell.header {
+    font-size: 12px;
+  }
+  .calendar-button {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .calendar-button + .calendar-button {
+    margin-top: 8px;
+  }
+  #container {
+    flex-direction: column;
+    height: auto;
+  }
+  #sidebar {
+    width: 100%;
+    max-height: 220px;
+  }
+  #map {
+    height: 260px;
+  }
+  #event-list {
+    padding: 12px;
   }
 }
 

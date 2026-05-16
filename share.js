@@ -20,12 +20,39 @@ function initSharePage() {
   const postalInput = document.getElementById("postalInput");
   const selectedPlaceName = document.getElementById("selectedPlaceName");
   const shareXBtn = document.getElementById("shareXBtn");
+  const saveCommentBtn = document.getElementById("saveCommentBtn");
+  const commentNotice = document.getElementById("commentNotice");
   const shareComment = document.getElementById("shareComment");
   const nameInput = document.getElementById("name");
   const mapDiv = document.getElementById("map");
   let selectedPlaceLabel = "なし";
   let eventTitle = "";
+  let eventDate = "";
   let markerMap = {}; // ユーザー名 → マーカー
+  let editingUserName = null;
+  let lastComments = {};
+
+  const loadOwnCommentToTextarea = () => {
+    const currentName = nameInput ? nameInput.value.trim() : "";
+    if (!currentName || !shareComment) return;
+    const ownComment = lastComments[currentName];
+    if (ownComment) {
+      shareComment.value = ownComment.comment || "";
+      editingUserName = currentName;
+      if (commentNotice) {
+        commentNotice.textContent = "あなたの投稿を読み込みました。編集して保存してください。";
+      }
+    }
+  };
+
+  const loadCommentForEdit = (userName, commentText, commentName) => {
+    if (!shareComment) return;
+    shareComment.value = commentText || "";
+    editingUserName = userName;
+    if (commentNotice) {
+      commentNotice.textContent = `「${commentName}」のコメントを読み込みました。保存すると反映されます。`;
+    }
+  };
   // ★ 地図の初期化
   let shareMap = L.map('map').setView([35.0, 135.0], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -257,6 +284,7 @@ function initSharePage() {
         const evt = snapshot.val();
         if (!evt) return;
         eventTitle = evt.title || eventTitle;
+        eventDate = evt.date || "";
 
         select.innerHTML = `
           <option value="${eventId}" selected>${evt.title}</option>
@@ -392,8 +420,44 @@ function initSharePage() {
       const title = eventTitle || selected;
       const mapImageUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat.toFixed(6)},${lng.toFixed(6)}&zoom=15&size=600x400&maptype=mapnik&markers=${lat.toFixed(6)},${lng.toFixed(6)},red-pushpin`;
       const tweet = `推し活共有\nイベント: ${title}\n日時: ${eventDate || "未設定"}\n場所: ${placeText}\n座標: ${lat.toFixed(6)},${lng.toFixed(6)}\nコメント: ${commentText || "なし"}\nマップ: ${mapImageUrl}`;
-      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
-      window.open(url, "_blank");
+      firebase.database().ref(`events/${eventId}`).update({
+        lastSharedAt: Date.now()
+      }).finally(() => {
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
+        window.open(url, "_blank");
+      });
+    });
+  }
+
+  if (saveCommentBtn) {
+    saveCommentBtn.addEventListener("click", () => {
+      const userName = nameInput ? nameInput.value.trim() : "";
+      const newComment = shareComment ? shareComment.value.trim() : "";
+      if (!userName) {
+        alert("名前を入力してください");
+        return;
+      }
+      if (!newComment) {
+        alert("コメントを入力してください");
+        return;
+      }
+      const targetUser = editingUserName || userName;
+      firebase.database().ref(`comments/${eventId}/${targetUser}`).update({
+        name: userName,
+        comment: newComment,
+        updatedAt: Date.now()
+      }).then(() => {
+        if (commentNotice) {
+          commentNotice.textContent = "コメントを保存しました。";
+        }
+        editingUserName = null;
+        if (lastComments[targetUser]) {
+          lastComments[targetUser].comment = newComment;
+        }
+        renderComments(lastComments);
+      }).catch((err) => {
+        alert("コメント保存に失敗しました: " + err.message);
+      });
     });
   }
 
@@ -465,6 +529,15 @@ function initSharePage() {
 
       const isMine = currentName && currentName === commentName;
       if (isMine) {
+        commentDiv.style.cursor = "pointer";
+        commentDiv.title = "ここをクリックすると編集エリアに反映できます";
+        commentDiv.onclick = () => {
+          loadCommentForEdit(userName, c.comment, commentName);
+          if (shareComment) {
+            shareComment.focus();
+          }
+        };
+
         const editBtn = document.createElement("button");
         editBtn.textContent = "✏️ 自分の投稿を編集";
         editBtn.style.background = "#2196F3";
@@ -475,60 +548,12 @@ function initSharePage() {
         editBtn.style.cursor = "pointer";
         editBtn.style.marginTop = "8px";
 
-        editBtn.onclick = () => {
-          const textarea = document.createElement("textarea");
-          textarea.value = c.comment || "";
-          textarea.style.width = "100%";
-          textarea.style.height = "100px";
-          textarea.style.marginTop = "8px";
-          textarea.style.padding = "8px";
-          textarea.style.border = "1px solid #ccc";
-          textarea.style.borderRadius = "6px";
-
-          const saveBtn = document.createElement("button");
-          saveBtn.textContent = "保存";
-          saveBtn.style.background = "#4CAF50";
-          saveBtn.style.color = "white";
-          saveBtn.style.border = "none";
-          saveBtn.style.borderRadius = "4px";
-          saveBtn.style.padding = "6px 10px";
-          saveBtn.style.cursor = "pointer";
-          saveBtn.style.marginRight = "8px";
-
-          const cancelBtn = document.createElement("button");
-          cancelBtn.textContent = "キャンセル";
-          cancelBtn.style.background = "#9E9E9E";
-          cancelBtn.style.color = "white";
-          cancelBtn.style.border = "none";
-          cancelBtn.style.borderRadius = "4px";
-          cancelBtn.style.padding = "6px 10px";
-          cancelBtn.style.cursor = "pointer";
-
-          const editArea = document.createElement("div");
-          editArea.appendChild(textarea);
-          editArea.appendChild(saveBtn);
-          editArea.appendChild(cancelBtn);
-
-          commentDiv.appendChild(editArea);
-          editBtn.disabled = true;
-
-          cancelBtn.onclick = () => {
-            commentDiv.removeChild(editArea);
-            editBtn.disabled = false;
-          };
-
-          saveBtn.onclick = () => {
-            const updatedComment = textarea.value.trim();
-            firebase.database().ref(`comments/${eventId}/${userName}`).update({
-              comment: updatedComment,
-              updatedAt: Date.now()
-            }).then(() => {
-              if (lastComments[userName]) {
-                lastComments[userName].comment = updatedComment;
-              }
-              renderComments(lastComments);
-            });
-          };
+        editBtn.onclick = (event) => {
+          event.stopPropagation();
+          loadCommentForEdit(userName, c.comment, commentName);
+          if (shareComment) {
+            shareComment.focus();
+          }
         };
 
         commentDiv.appendChild(editBtn);
@@ -542,11 +567,12 @@ function initSharePage() {
   commentsRef.on("value", snapshot => {
     lastComments = snapshot.val() || {};
     renderComments(lastComments);
+    loadOwnCommentToTextarea();
   });
 
   if (nameInput) {
     nameInput.addEventListener("input", () => {
-      renderComments(lastComments);
+      loadOwnCommentToTextarea();
     });
   }
 }

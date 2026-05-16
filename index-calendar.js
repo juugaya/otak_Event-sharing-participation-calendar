@@ -10,13 +10,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const nextMonthBtn = document.getElementById("nextMonthBtn");
     const shareEventBtn = document.getElementById("shareEventBtn");
     const params = new URLSearchParams(window.location.search);
-    const selectedEventId = params.get("event");
+    const initialSelectedEventId = params.get("event");
+    let selectedEventId = initialSelectedEventId;
     let events = {};
     const today = new Date();
+
+    const setSelectedEvent = (id) => {
+        selectedEventId = id;
+        updateCalendar();
+    };
     const minView = new Date(today.getFullYear(), today.getMonth(), 1);
-    const maxView = new Date(today.getFullYear(), today.getMonth() + 11, 1);
+    const maxView = new Date(today.getFullYear(), today.getMonth() + 12, 1);
     let currentViewYear = today.getFullYear();
     let currentViewMonth = today.getMonth();
+
+    const isDateToday = (dateString) => {
+        const d = new Date(dateString);
+        if (Number.isNaN(d.getTime())) return false;
+        const now = new Date();
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    };
 
     const normalizeView = (year, month) => {
         let date = new Date(year, month, 1);
@@ -32,7 +45,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 const d = new Date(evt.date);
                 if (Number.isNaN(d.getTime())) return null;
                 if (d.getFullYear() === year && d.getMonth() === month) {
-                    return { id, title: evt.title, date: evt.date, day: d.getDate() };
+                    return {
+                        id,
+                        title: evt.title,
+                        date: evt.date,
+                        day: d.getDate(),
+                        sharedAt: evt.lastSharedAt || null,
+                        shared: !!evt.lastSharedAt,
+                        isToday: isDateToday(evt.date)
+                    };
                 }
                 return null;
             })
@@ -72,27 +93,84 @@ document.addEventListener("DOMContentLoaded", () => {
             const cell = document.createElement("div");
             cell.className = "calendar-cell";
             const items = eventsByDay[d] || [];
-            const lines = [`${d}日`];
+            const cellContent = document.createElement("div");
+            cellContent.style.display = "flex";
+            cellContent.style.flexDirection = "column";
+            cellContent.style.alignItems = "center";
+            cellContent.style.justifyContent = "center";
+            cellContent.style.gap = "4px";
+            const dateLine = document.createElement("div");
+            dateLine.textContent = `${d}日`;
+            dateLine.style.fontWeight = "bold";
+            cellContent.appendChild(dateLine);
 
             if (items.length) {
-                cell.classList.add("event");
-                if (items.length === 1) {
-                    lines.push(items[0].title);
-                } else {
-                    items.slice(0, 2).forEach(evt => lines.push(evt.title));
-                    if (items.length > 2) lines.push(`他 ${items.length - 2} 件`);
+                    cell.classList.add("event");
+                    const titleList = document.createElement("div");
+                    titleList.style.fontSize = "12px";
+                    titleList.style.lineHeight = "1.2";
+                    titleList.style.whiteSpace = "pre-line";
+                    if (items.length === 1) {
+                        titleList.textContent = items[0].title;
+                    } else {
+                        titleList.textContent = items.slice(0, 2).map(evt => evt.title).join("\n");
+                        if (items.length > 2) {
+                            const more = document.createElement("div");
+                            more.textContent = `他 ${items.length - 2} 件`;
+                            more.style.fontSize = "11px";
+                            more.style.color = "#555";
+                            cellContent.appendChild(titleList);
+                            cellContent.appendChild(more);
+                        } else {
+                            cellContent.appendChild(titleList);
+                        }
+                    }
+                    if (items.length === 1) {
+                        cellContent.appendChild(titleList);
+                    }
+
+                    const todayFlags = items.filter(evt => evt.isToday);
+                    if (todayFlags.length) {
+                        const statusBadge = document.createElement("div");
+                        statusBadge.style.fontSize = "11px";
+                        statusBadge.style.color = "#333";
+                        statusBadge.style.marginTop = "4px";
+                        statusBadge.style.textAlign = "center";
+                        statusBadge.style.whiteSpace = "pre-line";
+                        statusBadge.textContent = todayFlags.map(evt => evt.shared ? `✅ ${evt.title} X済` : `⚠ ${evt.title} 要投稿`).join("\n");
+                        cellContent.appendChild(statusBadge);
+                    }
+
+                    const detailBtn = document.createElement("button");
+                    detailBtn.className = "calendar-detail-btn";
+                    detailBtn.textContent = "詳細ページへ";
+                    detailBtn.onclick = (event) => {
+                        event.stopPropagation();
+                        window.location.href = `share.html?event=${items[0].id}`;
+                    };
+                    cellContent.appendChild(detailBtn);
+
+                    const twitterBtn = document.createElement("button");
+                    twitterBtn.className = "calendar-detail-btn";
+                    twitterBtn.textContent = "X共有";
+                    twitterBtn.style.background = "#1DA1F2";
+                    twitterBtn.style.color = "white";
+                    twitterBtn.onclick = (event) => {
+                        event.stopPropagation();
+                        setSelectedEvent(items[0].id);
+                        shareToX();
+                    };
+                    cellContent.appendChild(twitterBtn);
+
+                    cell.onclick = () => {
+                        setSelectedEvent(items[0].id);
+                    };
                 }
-
-                cell.onclick = () => {
-                    window.location.href = `share.html?event=${items[0].id}`;
-                };
-            }
-
-            if (highlightId && items.some(evt => evt.id === highlightId)) {
+            if (selectedEventId && items.some(evt => evt.id === selectedEventId)) {
                 cell.classList.add("active");
             }
 
-            cell.textContent = lines.join("\n");
+            cell.appendChild(cellContent);
             calendarGrid.appendChild(cell);
         }
     };
@@ -175,6 +253,42 @@ document.addEventListener("DOMContentLoaded", () => {
         URL.revokeObjectURL(url);
     };
 
+    const getCalendarImageUrl = (year, month, eventItems) => {
+        const labels = eventItems.length
+            ? eventItems.map(evt => `${evt.day}日`)
+            : [`${month + 1}月`];
+        const data = eventItems.length ? eventItems.map(() => 1) : [1];
+        const chart = {
+            type: "bar",
+            data: {
+                labels,
+                datasets: [{
+                    label: "イベント",
+                    data,
+                    backgroundColor: "#4CAF50",
+                    borderRadius: 8,
+                    maxBarThickness: 40,
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: `${year}年${month + 1}月の推し活カレンダー`,
+                        color: "#333",
+                        font: { size: 18 }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: "#333", font: { size: 12 } }, grid: { display: false } },
+                    y: { display: false, beginAtZero: true }
+                }
+            }
+        };
+        return `https://quickchart.io/chart?width=620&height=360&c=${encodeURIComponent(JSON.stringify(chart))}`;
+    };
+
     const shareToX = () => {
         if (!selectedEventId || !events[selectedEventId]) {
             alert("共有したいイベントを選択してください。");
@@ -183,9 +297,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const evt = events[selectedEventId];
         const shareUrl = new URL("share.html", window.location.href);
         shareUrl.searchParams.set("event", selectedEventId);
-        const tweet = `推し活予定\nイベント: ${evt.title}\n日付: ${evt.date}\n詳細: ${shareUrl.toString()}`;
-        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
-        window.open(url, "_blank");
+        const eventDateObj = new Date(evt.date);
+        const year = eventDateObj.getFullYear();
+        const month = eventDateObj.getMonth();
+        const monthEvents = getEventsForMonth(year, month);
+        const imageUrl = getCalendarImageUrl(year, month, monthEvents);
+        const monthSummary = monthEvents.length
+            ? monthEvents.map(evt => `${evt.day}日 ${evt.title}`).join(' / ')
+            : '今月の予定はありません';
+        const tweet = `この画面を共有します\n${year}年${month + 1}月の推し活カレンダー\n選択中のイベント: ${evt.title} (${evt.date})\n今月の予定: ${monthSummary}\n詳細: ${shareUrl.toString()}\n画像: ${imageUrl}`;
+        firebase.database().ref(`events/${selectedEventId}`).update({
+            lastSharedAt: Date.now()
+        }).finally(() => {
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
+            window.open(url, "_blank");
+            updateCalendar();
+        });
     };
 
     if (addCalendarBtn) {
@@ -220,10 +347,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const div = document.createElement("div");
             div.className = "event-item";
-            div.textContent = `${evt.title}（${evt.date || '日付未設定'}）`;
-            div.onclick = () => {
+            div.style.display = "flex";
+            div.style.justifyContent = "space-between";
+            div.style.alignItems = "center";
+            div.style.gap = "10px";
+            const label = document.createElement("span");
+            label.textContent = `${evt.title}（${evt.date || '日付未設定'}）`;
+            label.style.cursor = "pointer";
+            label.onclick = () => setSelectedEvent(id);
+            const detailBtn = document.createElement("button");
+            detailBtn.textContent = "詳細ページへ";
+            detailBtn.className = "calendar-detail-btn";
+            detailBtn.onclick = (event) => {
+                event.stopPropagation();
                 window.location.href = `share.html?event=${id}`;
             };
+            div.appendChild(label);
+            div.appendChild(detailBtn);
             eventList.appendChild(div);
         });
 

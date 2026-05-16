@@ -3,34 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <title>イベント管理</title>
-</head>
+    <style>
+      /* 共通の変数定義 */
+      :root {
+        --bg-color: #f3f6fb;
+        --card-bg: #ffffff;
+        --border-color: #dde6f2;
+        --text-color: #222;
+        --primary-blue: #3498db;
+        --x-blue: #1da1f2;
+        --btn-edit: #8e44ad;
+        --btn-delete: #e74c3c;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg-color);
+        color: var(--text-color);
+      }
+      .page-container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding-bottom: 40px;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.6rem;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      .form-grid label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .form-grid input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 1rem;
+        background: #fff;
+      }
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .button-row button,
+      #backBtn {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      #saveBtn {
+        background: var(--primary-blue);
+        color: white;
+        flex: 1 1 auto;
+        min-width: 140px;
+      }
+      #shareBtn {
+        background: var(--x-blue);
+        color: white;
+        flex: 1 1 auto;
+        min-width: 140px;
+      }
+      p {
+        margin-top: 0;
+      }
+      #backBtn {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 9999;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      /* ===================================================
+         ★ ここから「イベント一覧」の見やすさ・スマホ対応の修正
+         =================================================== */
+      #eventList {
+        display: grid;
+        gap: 12px;
+      }
+      
+      /* イベントのカード全体 */
+      #eventList .event-item {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px; /* 文字とボタンの間の余白を確保 */
+      }
+
+      /* テキストを包む要素（長い文章でもはみ出さないように制御） */
+      #eventList .event-info {
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1.4;
+        word-break: break-all; /* 英語や記号が連続しても強制折り返し */
+        overflow-wrap: break-word; /* 長い単語の折り返し */
+        flex: 1; /* ボタン以外の領域を限界まで広げる */
+        min-width: 0; /* flexアイテムの縮小バグを防ぐ記述（超重要） */
+      }
+
+      /* ボタンを包む要素 */
+      #eventList .event-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0; /* ボタン群が文字に押されて潰れないように固定 */
+      }
+
+      /* 編集・削除ボタン共通 */
+      #eventList .event-actions button {
+        border: none;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: white;
+        cursor: pointer;
+        white-space: nowrap; /* ボタン内の文字「編集」「削除」が縦に割れないように固定 */
+      }
+
+      /* 編集ボタンの色 */
+      #eventList .event-actions button:not(.delete) {
+        background: var(--btn-edit);
+      }
+
+      /* 削除ボタンの色 */
+      #eventList .event-actions button.delete {
+        background: var(--btn-delete);
+      }
+
+      /* ===================================================
+         ★ レスポンシブ（スマホ・タブレット対応）
+         =================================================== */
+      @media (max-width: 720px) {
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .button-row {
+          flex-direction: column;
+        }
+        .button-row button {
+          width: 100%;
+        }
+      }
+
+      /* 横幅が狭いスマホ（540px以下）の時は、ボタンを下に回して文字領域を最大化する */
+      @media (max-width: 540px) {
+        #eventList .event-item {
+          flex-direction: column; /* 縦並びに変更 */
+          align-items: flex-start; /* 左寄せ */
+          gap: 12px;
+        }
+        
+        #eventList .event-info {
+          width: 100%;
+        }
+
+        #eventList .event-actions {
+          width: 100%; /* スマホ時はボタンの横幅をいっぱいにする */
+          justify-content: flex-end; /* ボタンを右寄せにする（お好みで左寄せならflex-start） */
+        }
+        
+        #eventList .event-actions button {
+          flex: 1; /* ボタンを均等な大きさに広げる */
+          text-align: center;
+          padding: 10px; /* タップしやすいように少し厚めに */
+        }
+      }
+    </style>
+  </head>
 <body>
-<button id="backBtn" style="position: fixed; top: 12px; left: 12px; z-index: 9999; padding: 10px 14px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ccc; border-radius: 8px; cursor: pointer;">
+<button id="backBtn">
   ← 推し活マップに戻る
 </button>
-
+<div class="page-container">
 <h1>イベント管理</h1>
-
-<label>イベントID：</label>
-<input id="eventId">
-
-<label>タイトル：</label>
-<input id="title">
-
-<label>日付：</label>
-<input id="date" type="date">
-
-<label>ピン色：</label>
-<input id="pinColor">
-
-<button id="saveBtn">保存</button>
-<button id="shareBtn">位置共有ページを開く</button>
+<div class="form-grid">
+  <div>
+    <label for="eventId">イベントID：</label>
+    <input id="eventId" type="text">
+  </div>
+  <div>
+    <label for="title">タイトル：</label>
+    <input id="title" type="text">
+  </div>
+  <div>
+    <label for="date">日付：</label>
+    <input id="date" type="date">
+  </div>
+  <div>
+    <label for="pinColor">ピン色：</label>
+    <input id="pinColor" type="text" placeholder="例: red, #ff0000">
+  </div>
+</div>
+<div class="button-row">
+  <button id="saveBtn">保存</button>
+  <button id="shareBtn">位置共有ページを開く</button>
+</div>
 
 <p style="margin-top: 12px; padding: 10px; background: #fff8db; border: 1px solid #f3d27a; border-radius: 6px;">
   イベントを保存してから「位置共有ページを開く」ボタンを押してください。
 </p>
 
 <h2>イベント一覧</h2>
+<div style="margin-bottom: 15px;">
+    <button id="sortBtn" onclick="toggleSortOrder()" style="padding: 5px 15px; cursor: pointer;">
+        並び替え: 古い順 (▲)
+    </button>
+</div>
 <div id="eventList"></div>
 
 <!-- Firebase v8 読み込み -->
