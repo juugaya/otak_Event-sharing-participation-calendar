@@ -125,8 +125,83 @@
       const storageKey = `events_${currentUser}`;
       localStorage.setItem(storageKey, JSON.stringify(events));
     }
+
+
   </script>
 
+  <script>
+    // --- 既存のボタン遷移処理（安全版） ---
+    if (!window.hasAdminBtnBound) {
+      document.getElementById("adminBtn").onclick = () => {
+        const currentParam = new URLSearchParams(window.location.search);
+        const user = currentParam.get('user') || 'default';
+        window.location.href = `event-admin.html?user=${user}`;
+      };
+      const goAdminBtn = document.getElementById("goAdminBtn");
+      if (goAdminBtn) {
+        goAdminBtn.onclick = () => {
+          const currentParam = new URLSearchParams(window.location.search);
+          const user = currentParam.get('user') || 'default';
+          window.location.href = `event-admin.html?user=${user}`;
+        };
+      }
+      window.hasAdminBtnBound = true;
+    }
+
+    // --- 【完全版】チェックした予定だけをXにシェアする処理 ---
+    document.getElementById('shareEventBtn').onclick = () => {
+      // 1. 画面上のすべてのチェックボックスを取得
+      const checkBoxes = document.querySelectorAll('.event-check');
+      const checkedEventIds = [];
+      
+      // 2. チェックが入っているイベントのID（Firebaseのキー）を集める
+      checkBoxes.forEach(box => {
+        if (box.checked) {
+          checkedEventIds.push(box.getAttribute('data-id'));
+        }
+      });
+
+      if (checkedEventIds.length === 0) {
+        alert('共有したいイベントにチェックを入れてからボタンを押してください！');
+        return;
+      }
+
+      // 3. グローバル変数「events」から、チェックされたイベントのデータだけを抽出
+      const sharedEventsList = [];
+      if (typeof events !== 'undefined') {
+        checkedEventIds.forEach(id => {
+          if (events[id]) {
+            // 後でカレンダーに再描画しやすいよう、idも含めて保存
+            sharedEventsList.push({
+              id: id,
+              ...events[id]
+            });
+          }
+        });
+      }
+
+      // 4. 現在のユーザー名を取得
+      const currentParam = new URLSearchParams(window.location.search);
+      const user = currentParam.get('user') || 'default';
+      
+      // 5. 抽出したイベントデータをBase64エンコード
+      const jsonString = JSON.stringify(sharedEventsList);
+      const encodedData = btoa(encodeURIComponent(jsonString));
+      
+      // 6. 共有用URLを作成（ローカル環境ならfile:///ではなく、実際のドメインになるようにoriginを使用）
+      // ※file:/// の時は window.location.origin が "null" になることがあるため安全対策
+      const baseOrigin = window.location.origin === "null" ? "https://juugaya.github.io" : window.location.origin;
+      const shareUrl = `${baseOrigin}${window.location.pathname}?user=${user}&data=${encodedData}`;
+      
+      // 7. Xのポスト画面用のテキスト（ツイート本文）
+      const tweetText = encodeURIComponent(`選んだSTU48の推し活予定カレンダーを共有します！✨\n#推し活動リスト #STU48`);
+      const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
+      
+      // 8. Xを開く
+      window.open(xUrl, '_blank');
+    };
+  </script>
+  
   <div id="info"></div>
 
   <style>
