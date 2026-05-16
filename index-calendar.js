@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedEventId = id;
         updateCalendar();
     };
+
     const minView = new Date(today.getFullYear(), today.getMonth(), 1);
     const maxView = new Date(today.getFullYear(), today.getMonth() + 12, 1);
     let currentViewYear = today.getFullYear();
@@ -99,75 +100,74 @@ document.addEventListener("DOMContentLoaded", () => {
             cellContent.style.alignItems = "center";
             cellContent.style.justifyContent = "center";
             cellContent.style.gap = "4px";
+
             const dateLine = document.createElement("div");
             dateLine.textContent = `${d}日`;
             dateLine.style.fontWeight = "bold";
             cellContent.appendChild(dateLine);
 
             if (items.length) {
-                    cell.classList.add("event");
-                    const titleList = document.createElement("div");
-                    titleList.style.fontSize = "12px";
-                    titleList.style.lineHeight = "1.2";
-                    titleList.style.whiteSpace = "pre-line";
-                    if (items.length === 1) {
-                        titleList.textContent = items[0].title;
+                cell.classList.add("event");
+
+                // イベントごとにタイトル＋チェックボックスを生成
+                items.forEach(evt => {
+                    const evtBlock = document.createElement("div");
+                    evtBlock.style.display = "flex";
+                    evtBlock.style.flexDirection = "column";
+                    evtBlock.style.alignItems = "flex-start";
+                    evtBlock.style.width = "100%";
+                    evtBlock.style.borderTop = "1px solid #ddd";
+                    evtBlock.style.paddingTop = "4px";
+                    evtBlock.style.marginTop = "4px";
+
+                    const titleDiv = document.createElement("div");
+                    titleDiv.style.fontSize = "12px";
+                    titleDiv.style.lineHeight = "1.3";
+                    titleDiv.style.wordBreak = "break-all";
+                    titleDiv.textContent = evt.title;
+
+                    if (evt.isToday) {
+                        const badge = document.createElement("div");
+                        badge.style.fontSize = "11px";
+                        badge.style.color = "#333";
+                        badge.style.marginTop = "2px";
+                        badge.textContent = evt.shared ? `✅ X済` : `⚠ 要投稿`;
+                        evtBlock.appendChild(titleDiv);
+                        evtBlock.appendChild(badge);
                     } else {
-                        titleList.textContent = items.slice(0, 2).map(evt => evt.title).join("\n");
-                        if (items.length > 2) {
-                            const more = document.createElement("div");
-                            more.textContent = `他 ${items.length - 2} 件`;
-                            more.style.fontSize = "11px";
-                            more.style.color = "#555";
-                            cellContent.appendChild(titleList);
-                            cellContent.appendChild(more);
-                        } else {
-                            cellContent.appendChild(titleList);
-                        }
-                    }
-                    if (items.length === 1) {
-                        cellContent.appendChild(titleList);
+                        evtBlock.appendChild(titleDiv);
                     }
 
-                    const todayFlags = items.filter(evt => evt.isToday);
-                    if (todayFlags.length) {
-                        const statusBadge = document.createElement("div");
-                        statusBadge.style.fontSize = "11px";
-                        statusBadge.style.color = "#333";
-                        statusBadge.style.marginTop = "4px";
-                        statusBadge.style.textAlign = "center";
-                        statusBadge.style.whiteSpace = "pre-line";
-                        statusBadge.textContent = todayFlags.map(evt => evt.shared ? `✅ ${evt.title} X済` : `⚠ ${evt.title} 要投稿`).join("\n");
-                        cellContent.appendChild(statusBadge);
-                    }
+                    const checkContainer = document.createElement("label");
+                    checkContainer.style.display = "flex";
+                    checkContainer.style.alignItems = "center";
+                    checkContainer.style.gap = "4px";
+                    checkContainer.style.margin = "4px 0 0 0";
+                    checkContainer.style.cursor = "pointer";
+                    checkContainer.style.fontSize = "12px";
 
-                    const detailBtn = document.createElement("button");
-                    detailBtn.className = "calendar-detail-btn";
-                    detailBtn.textContent = "詳細ページへ";
-                    detailBtn.onclick = (event) => {
-                        event.stopPropagation();
-                        window.location.href = `share.html?event=${items[0].id}`;
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.className = "event-check";
+                    checkbox.setAttribute("data-id", evt.id || "");
+                    checkbox.onclick = (e) => {
+                        e.stopPropagation();
                     };
-                    cellContent.appendChild(detailBtn);
 
-                    const twitterBtn = document.createElement("button");
-                    twitterBtn.className = "calendar-detail-btn";
-                    twitterBtn.textContent = "X共有";
-                    twitterBtn.style.background = "#1DA1F2";
-                    twitterBtn.style.color = "white";
-                    twitterBtn.onclick = (event) => {
-                        event.stopPropagation();
-                        setSelectedEvent(items[0].id);
-                        shareToX();
-                    };
-                    cellContent.appendChild(twitterBtn);
+                    const checkLabel = document.createElement("span");
+                    checkLabel.textContent = "共有";
+                    checkLabel.style.color = "#333";
 
-                    cell.onclick = () => {
-                        setSelectedEvent(items[0].id);
-                    };
+                    checkContainer.appendChild(checkbox);
+                    checkContainer.appendChild(checkLabel);
+                    evtBlock.appendChild(checkContainer);
+
+                    cellContent.appendChild(evtBlock);
+                });
+
+                if (selectedEventId && items.some(evt => evt.id === selectedEventId)) {
+                    cell.classList.add("active");
                 }
-            if (selectedEventId && items.some(evt => evt.id === selectedEventId)) {
-                cell.classList.add("active");
             }
 
             cell.appendChild(cellContent);
@@ -315,12 +315,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    if (addCalendarBtn) {
-        addCalendarBtn.addEventListener("click", downloadIcs);
-    }
-    if (shareEventBtn) {
-        shareEventBtn.addEventListener("click", shareToX);
-    }
+    if (addCalendarBtn) addCalendarBtn.addEventListener("click", downloadIcs);
+    if (shareEventBtn) shareEventBtn.addEventListener("click", shareToX);
+
     if (prevMonthBtn) {
         prevMonthBtn.addEventListener("click", () => {
             const prev = normalizeView(currentViewYear, currentViewMonth - 1);
@@ -339,7 +336,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     db.ref("events").once("value").then(snapshot => {
+        if (!eventList) return;
         eventList.innerHTML = "";
+
         snapshot.forEach(child => {
             const id = child.key;
             const evt = child.val();
@@ -351,10 +350,15 @@ document.addEventListener("DOMContentLoaded", () => {
             div.style.justifyContent = "space-between";
             div.style.alignItems = "center";
             div.style.gap = "10px";
+
             const label = document.createElement("span");
             label.textContent = `${evt.title}（${evt.date || '日付未設定'}）`;
             label.style.cursor = "pointer";
-            label.onclick = () => setSelectedEvent(id);
+            label.style.fontSize = "14px";
+            label.onclick = () => {
+                if (typeof setSelectedEvent === 'function') setSelectedEvent(id);
+            };
+
             const detailBtn = document.createElement("button");
             detailBtn.textContent = "詳細ページへ";
             detailBtn.className = "calendar-detail-btn";
@@ -362,12 +366,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 event.stopPropagation();
                 window.location.href = `share.html?event=${id}`;
             };
+
             div.appendChild(label);
             div.appendChild(detailBtn);
             eventList.appendChild(div);
         });
 
-        if (selectedEventId && events[selectedEventId] && events[selectedEventId].date) {
+        if (typeof selectedEventId !== 'undefined' && selectedEventId && events[selectedEventId] && events[selectedEventId].date) {
             const selectedDate = new Date(events[selectedEventId].date);
             if (!Number.isNaN(selectedDate.getTime())) {
                 currentViewYear = selectedDate.getFullYear();
@@ -375,7 +380,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        updateCalendar();
+        if (typeof updateCalendar === 'function') {
+            updateCalendar();
+        }
     });
-
 });

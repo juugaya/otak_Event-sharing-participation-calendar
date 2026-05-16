@@ -35,6 +35,7 @@
       <button id="prevMonthBtn" class="calendar-button" style="background: #3498db; color: white;">◀ 前の月</button>
       <button id="nextMonthBtn" class="calendar-button" style="background: #3498db; color: white;">次の月 ▶</button>
       <button id="shareEventBtn" class="calendar-button" style="background: #1DA1F2; color: white;">🕊️ この画面をXで共有</button>
+      <button id="share-x-btn">X（Twitter）にカレンダーを投稿する</button>
       <button id="goAdminBtn" class="calendar-button" style="background: #8E44AD; color: white;">🛠️ イベント管理へ</button>
     </div>
     <div id="calendarMonth" style="margin-bottom: 10px; font-weight: bold;">読み込み中...</div>
@@ -62,12 +63,25 @@
   <!-- ★ イベント選択時は地図モードに切り替える -->
 
 <script>
+
+  // --- 1. URLパラメータの取得 ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUser = urlParams.get('user') || 'default'; // ?user=〇〇 がない場合は default
+    const base64Data = urlParams.get('data');               // Xから来たデータの塊
+
+    // 画面のタイトルなどをユーザー名に書き換える（お好みで）
+    const calendarMonthEl = document.getElementById("calendarMonth");
+    // ※実際の描画ロジックで上書きされる場合は、タイトル用の別要素を作っても良いです。
+
   if (location.search.includes("event=")) {
     document.getElementById("event-list").style.display = "none";
     document.getElementById("container").style.display = "flex";
   }
 
   document.getElementById("backBtn").onclick = () => {
+    // 戻るときもユーザー名を維持して戻る
+    window.location.href = `index.html?user=${currentUser}`;
+
     // event パラメータなしのトップへ戻る
     window.location.href = "index.html";
   };
@@ -85,6 +99,72 @@
         window.location.href = "event-admin.html";
       };
     }
+   // ==========================================
+    // ここから下に「2」と「3」のJavaScriptを追記します！
+    // ==========================================
+
+    // URLからユーザー名（なければdefault）と、X経由のデータを取得
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUser = urlParams.get('user') || 'default';
+    const base64Data = urlParams.get('data');
+
+    // 【2の処理】既存の「🕊️ この画面をXで共有」ボタンにシェア処理を紐付ける
+    document.getElementById('shareEventBtn').addEventListener('click', () => {
+      // ※注意：現在のカレンダーデータを取得する関数（loadEventsなど）や変数名に合わせてください
+      const currentEvents = typeof loadEvents === 'function' ? loadEvents() : []; 
+      
+      const jsonString = JSON.stringify(currentEvents);
+      const encodedData = btoa(encodeURIComponent(jsonString));
+      
+      // 共有用URLの作成（ユーザー名とデータを乗せる）
+      const shareUrl = `${window.location.origin}${window.location.pathname}?user=${currentUser}&data=${encodedData}`;
+      
+      const tweetText = encodeURIComponent(`${currentUser}のイベントカレンダーを共有します！ #推し活動リスト`);
+      const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
+      
+      window.open(xUrl, '_blank');
+    });
+
+    // 【3の処理】ページを開いたときに、URLにデータ（data=...）があれば復元する
+    window.addEventListener('DOMContentLoaded', () => {
+      let eventsToShow = [];
+
+      if (base64Data) {
+        try {
+          // XのURLから来た場合：データを復元
+          const decodedJson = decodeURIComponent(atob(base64Data));
+          eventsToShow = JSON.parse(decodedJson);
+          console.log("Xからデータを読み込みました", eventsToShow);
+        } catch (e) {
+          console.error("データの読み込みに失敗しました", e);
+        }
+      } else {
+        // 通常アクセスの場合：これまで通り自分のデータを読み込む
+        eventsToShow = typeof loadEvents === 'function' ? loadEvents() : []; 
+      }
+
+      // 最後に、取得したデータをカレンダー描画関数に渡して画面に表示する
+      // ※注意：お使いのカレンダー描画関数の名前（renderCalendarなど）に合わせて呼び出してください
+      if (typeof renderCalendar === 'function') {
+        renderCalendar(eventsToShow); 
+      }
+    });
+
+  function loadEvents() {
+  // キーを「events_ユーザー名」にする
+  const storageKey = `events_${currentUser}`;
+  const savedEvents = localStorage.getItem(storageKey);
+  
+  return savedEvents ? JSON.parse(savedEvents) : [];
+}
+
+function saveEvents(events) {
+  // キーを「events_ユーザー名」にする
+  const storageKey = `events_${currentUser}`;
+  localStorage.setItem(storageKey, JSON.stringify(events));
+}
+
+  
   </script>
 
   <div id="info"></div>
