@@ -9,8 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevMonthBtn = document.getElementById("prevMonthBtn");
     const nextMonthBtn = document.getElementById("nextMonthBtn");
     const shareEventBtn = document.getElementById("shareEventBtn");
-    const params = new URLSearchParams(window.location.search);
-    const initialSelectedEventId = params.get("event");
+    const calendarParams = new URLSearchParams(window.location.search);
+    const initialSelectedEventId = calendarParams.get("event");
     let selectedEventId = initialSelectedEventId;
     let events = {};
     const today = new Date();
@@ -290,25 +290,29 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const shareToX = () => {
-        if (!selectedEventId || !events[selectedEventId]) {
-            alert("共有したいイベントを選択してください。");
+        // チェックされているイベントIDを収集
+        const checkedIds = Array.from(document.querySelectorAll(".event-check:checked"))
+            .map(cb => cb.getAttribute("data-id"))
+            .filter(id => id && events[id]);
+
+        if (checkedIds.length === 0) {
+            alert("共有したいイベントのチェックボックスにチェックを入れてください。");
             return;
         }
-        const evt = events[selectedEventId];
-        const shareUrl = new URL("share.html", window.location.href);
-        shareUrl.searchParams.set("event", selectedEventId);
-        const eventDateObj = new Date(evt.date);
-        const year = eventDateObj.getFullYear();
-        const month = eventDateObj.getMonth();
-        const monthEvents = getEventsForMonth(year, month);
-        const imageUrl = getCalendarImageUrl(year, month, monthEvents);
-        const monthSummary = monthEvents.length
-            ? monthEvents.map(evt => `${evt.day}日 ${evt.title}`).join(' / ')
-            : '今月の予定はありません';
-        const tweet = `この画面を共有します\n${year}年${month + 1}月の推し活カレンダー\n選択中のイベント: ${evt.title} (${evt.date})\n今月の予定: ${monthSummary}\n詳細: ${shareUrl.toString()}\n画像: ${imageUrl}`;
-        firebase.database().ref(`events/${selectedEventId}`).update({
-            lastSharedAt: Date.now()
-        }).finally(() => {
+
+        // チェックされたイベントの情報をまとめる
+        const checkedEvents = checkedIds.map(id => events[id]);
+        const eventLines = checkedEvents.map(evt => `・${evt.title}（${evt.date}）`).join("\n");
+
+        // file:// でも動くURL生成（share.htmlへのリンクは省略）
+        const tweet = `推し活カレンダーを共有します🎉\n\n${eventLines}\n\n#推し活動リスト`;
+
+        // Firebase に lastSharedAt を記録
+        const updates = checkedIds.map(id =>
+            firebase.database().ref(`events/${id}`).update({ lastSharedAt: Date.now() })
+        );
+
+        Promise.allSettled(updates).finally(() => {
             const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
             window.open(url, "_blank");
             updateCalendar();

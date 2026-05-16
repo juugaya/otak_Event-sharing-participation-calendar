@@ -41,7 +41,6 @@
     <div id="calendarMonth" style="margin-bottom: 10px; font-weight: bold;">読み込み中...</div>
     <div id="calendarGrid" class="calendar-grid"></div>
     <div id="calendarStatus" style="margin-top: 10px; color: #666;"></div>
-    <!-- <button id="addCalendarBtn" class="calendar-button" style="margin-top: 10px; background: #8E44AD; color: white;">📥 カレンダーに追加</button> -->
   </div>
 
   <!-- ★ イベント一覧（カレンダー） -->
@@ -49,10 +48,9 @@
     イベント読み込み中…
   </div>
 
-
   <button id="backBtn" class="back-btn">
-  ← 推し活動リストに戻る
-</button>
+    ← 推し活動リストに戻る
+  </button>
 
   <!-- ★ 地図モード（イベント選択時のみ表示） -->
   <div id="container" style="display:none;">
@@ -60,18 +58,11 @@
     <div id="map"></div>
   </div>
 
-  <!-- ★ イベント選択時は地図モードに切り替える -->
-
 <script>
-
-  // --- 1. URLパラメータの取得 ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentUser = urlParams.get('user') || 'default'; // ?user=〇〇 がない場合は default
-    const base64Data = urlParams.get('data');               // Xから来たデータの塊
-
-    // 画面のタイトルなどをユーザー名に書き換える（お好みで）
-    const calendarMonthEl = document.getElementById("calendarMonth");
-    // ※実際の描画ロジックで上書きされる場合は、タイトル用の別要素を作っても良いです。
+  // --- URLパラメータの取得（varで宣言し calendar.js の const と衝突しないようにする）---
+  var urlParams = new URLSearchParams(window.location.search);
+  var currentUser = urlParams.get('user') || 'default';
+  var base64Data = urlParams.get('data');
 
   if (location.search.includes("event=")) {
     document.getElementById("event-list").style.display = "none";
@@ -79,15 +70,9 @@
   }
 
   document.getElementById("backBtn").onclick = () => {
-    // 戻るときもユーザー名を維持して戻る
-    window.location.href = `index.html?user=${currentUser}`;
-
-    // event パラメータなしのトップへ戻る
     window.location.href = "index.html";
   };
-
 </script>
-
 
   <script>
     document.getElementById("adminBtn").onclick = () => {
@@ -99,39 +84,23 @@
         window.location.href = "event-admin.html";
       };
     }
-   // ==========================================
-    // ここから下に「2」と「3」のJavaScriptを追記します！
-    // ==========================================
-
-    // URLからユーザー名（なければdefault）と、X経由のデータを取得
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentUser = urlParams.get('user') || 'default';
-    const base64Data = urlParams.get('data');
 
     // 【2の処理】既存の「🕊️ この画面をXで共有」ボタンにシェア処理を紐付ける
     document.getElementById('shareEventBtn').addEventListener('click', () => {
-      // ※注意：現在のカレンダーデータを取得する関数（loadEventsなど）や変数名に合わせてください
-      const currentEvents = typeof loadEvents === 'function' ? loadEvents() : []; 
-      
+      const currentEvents = typeof loadEvents === 'function' ? loadEvents() : [];
       const jsonString = JSON.stringify(currentEvents);
       const encodedData = btoa(encodeURIComponent(jsonString));
-      
-      // 共有用URLの作成（ユーザー名とデータを乗せる）
       const shareUrl = `${window.location.origin}${window.location.pathname}?user=${currentUser}&data=${encodedData}`;
-      
       const tweetText = encodeURIComponent(`${currentUser}のイベントカレンダーを共有します！ #推し活動リスト`);
       const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
-      
       window.open(xUrl, '_blank');
     });
 
     // 【3の処理】ページを開いたときに、URLにデータ（data=...）があれば復元する
     window.addEventListener('DOMContentLoaded', () => {
       let eventsToShow = [];
-
       if (base64Data) {
         try {
-          // XのURLから来た場合：データを復元
           const decodedJson = decodeURIComponent(atob(base64Data));
           eventsToShow = JSON.parse(decodedJson);
           console.log("Xからデータを読み込みました", eventsToShow);
@@ -139,32 +108,23 @@
           console.error("データの読み込みに失敗しました", e);
         }
       } else {
-        // 通常アクセスの場合：これまで通り自分のデータを読み込む
-        eventsToShow = typeof loadEvents === 'function' ? loadEvents() : []; 
+        eventsToShow = typeof loadEvents === 'function' ? loadEvents() : [];
       }
-
-      // 最後に、取得したデータをカレンダー描画関数に渡して画面に表示する
-      // ※注意：お使いのカレンダー描画関数の名前（renderCalendarなど）に合わせて呼び出してください
       if (typeof renderCalendar === 'function') {
-        renderCalendar(eventsToShow); 
+        renderCalendar(eventsToShow);
       }
     });
 
-  function loadEvents() {
-  // キーを「events_ユーザー名」にする
-  const storageKey = `events_${currentUser}`;
-  const savedEvents = localStorage.getItem(storageKey);
-  
-  return savedEvents ? JSON.parse(savedEvents) : [];
-}
+    function loadEvents() {
+      const storageKey = `events_${currentUser}`;
+      const savedEvents = localStorage.getItem(storageKey);
+      return savedEvents ? JSON.parse(savedEvents) : [];
+    }
 
-function saveEvents(events) {
-  // キーを「events_ユーザー名」にする
-  const storageKey = `events_${currentUser}`;
-  localStorage.setItem(storageKey, JSON.stringify(events));
-}
-
-  
+    function saveEvents(events) {
+      const storageKey = `events_${currentUser}`;
+      localStorage.setItem(storageKey, JSON.stringify(events));
+    }
   </script>
 
   <div id="info"></div>
@@ -183,7 +143,7 @@ function saveEvents(events) {
     }
     #map {
       flex: 1;
-      height: 100vh;   /* ★ これがないと地図は表示されない */
+      height: 100vh;
     }
     .calendar-grid {
       display: grid;
@@ -231,27 +191,6 @@ function saveEvents(events) {
       cursor: pointer;
       font-weight: bold;
     }
-    .calendar-cell {
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f9f9f9;
-      border-radius: 6px;
-      font-size: 13px;
-      white-space: pre-line;
-      text-align: center;
-    }
-    .calendar-cell.header {
-      background: #e8f4ff;
-      font-weight: bold;
-      color: #333;
-    }
-    .calendar-cell.active {
-      background: #ffeaa7;
-      border: 2px solid #f1c40f;
-      font-weight: bold;
-    }
     .comment-item {
       padding: 8px;
       margin-bottom: 8px;
@@ -259,100 +198,48 @@ function saveEvents(events) {
       border-radius: 6px;
       border: 1px solid #ddd;
     }
-    .comment-item strong {
-      font-size: 14px;
-    }
-    .comment-item small {
-      color: #666;
-    }
+    .comment-item strong { font-size: 14px; }
+    .comment-item small { color: #666; }
 
     .back-btn {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 9999;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 9999;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
 
-/* スマホ向けに大きめにする */
-@media (max-width: 600px) {
-  .back-btn {
-    padding: 12px 18px;
-    font-size: 16px;
-  }
-}
+    @media (max-width: 600px) {
+      .back-btn { padding: 12px 18px; font-size: 16px; }
+    }
 
-/* モバイル表示対応 */
-@media (max-width: 900px) {
-  #calendarSection {
-    padding: 12px;
-  }
-  #calendarSection h2 {
-    font-size: 1.4rem;
-  }
-  .calendar-grid {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
-  }
-  .calendar-grid::after {
-    content: '';
-    display: block;
-    width: 12px;
-  }
-  .calendar-cell {
-    min-width: 100px;
-  }
-  .calendar-button {
-    width: 100%;
-    flex: 1 1 100%;
-    min-width: 0;
-  }
-}
+    @media (max-width: 900px) {
+      #calendarSection { padding: 12px; }
+      #calendarSection h2 { font-size: 1.4rem; }
+      .calendar-grid { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+      .calendar-grid::after { content: ''; display: block; width: 12px; }
+      .calendar-cell { min-width: 100px; }
+      .calendar-button { width: 100%; flex: 1 1 100%; min-width: 0; }
+    }
 
-@media (max-width: 600px) {
-  .calendar-grid {
-    grid-template-columns: repeat(7, minmax(100px, 1fr));
-  }
-  .calendar-cell {
-    min-height: 70px;
-    font-size: 12px;
-    padding: 8px;
-  }
-  .calendar-cell.header {
-    font-size: 12px;
-  }
-  .calendar-button {
-    padding: 12px 14px;
-    font-size: 14px;
-  }
-  .calendar-button + .calendar-button {
-    margin-top: 8px;
-  }
-  #container {
-    flex-direction: column;
-    height: auto;
-  }
-  #sidebar {
-    width: 100%;
-    max-height: 220px;
-  }
-  #map {
-    height: 260px;
-  }
-  #event-list {
-    padding: 12px;
-  }
-}
-
+    @media (max-width: 600px) {
+      .calendar-grid { grid-template-columns: repeat(7, minmax(100px, 1fr)); }
+      .calendar-cell { min-height: 70px; font-size: 12px; padding: 8px; }
+      .calendar-cell.header { font-size: 12px; }
+      .calendar-button { padding: 12px 14px; font-size: 14px; }
+      .calendar-button + .calendar-button { margin-top: 8px; }
+      #container { flex-direction: column; height: auto; }
+      #sidebar { width: 100%; max-height: 220px; }
+      #map { height: 260px; }
+      #event-list { padding: 12px; }
+    }
   </style>
-
 
   <script src="mode-switch.js" defer></script>
 
