@@ -62,118 +62,157 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const renderCalendarGrid = (year, month, eventItems = [], highlightId = null) => {
-        if (!calendarMonth || !calendarGrid || !calendarStatus) return;
-        calendarMonth.textContent = `${year}年${month + 1}月`;
-        calendarGrid.innerHTML = "";
+    if (!calendarMonth || !calendarGrid || !calendarStatus) return;
+    calendarMonth.textContent = `${year}年${month + 1}月`;
+    calendarGrid.innerHTML = "";
 
-        const labels = ["日", "月", "火", "水", "木", "金", "土"];
-        labels.forEach(label => {
-            const th = document.createElement("div");
-            th.className = "calendar-cell header";
-            th.textContent = label;
-            calendarGrid.appendChild(th);
-        });
+    const labels = ["日", "月", "火", "水", "木", "金", "土"];
+    labels.forEach(label => {
+        const th = document.createElement("div");
+        th.className = "calendar-cell header";
+        th.textContent = label;
+        calendarGrid.appendChild(th);
+    });
 
-        const first = new Date(year, month, 1);
-        const totalDays = new Date(year, month + 1, 0).getDate();
-        const startWeekDay = first.getDay();
+    const first = new Date(year, month, 1);
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const startWeekDay = first.getDay();
 
-        for (let i = 0; i < startWeekDay; i++) {
-            const empty = document.createElement("div");
-            empty.className = "calendar-cell";
-            calendarGrid.appendChild(empty);
-        }
+    for (let i = 0; i < startWeekDay; i++) {
+        const empty = document.createElement("div");
+        empty.className = "calendar-cell";
+        calendarGrid.appendChild(empty);
+    }
 
-        const eventsByDay = {};
-        eventItems.forEach(evt => {
-            eventsByDay[evt.day] = eventsByDay[evt.day] || [];
-            eventsByDay[evt.day].push(evt);
-        });
+    const eventsByDay = {};
+    eventItems.forEach(evt => {
+        eventsByDay[evt.day] = eventsByDay[evt.day] || [];
+        eventsByDay[evt.day].push(evt);
+    });
 
-        for (let d = 1; d <= totalDays; d++) {
-            const cell = document.createElement("div");
-            cell.className = "calendar-cell";
-            const items = eventsByDay[d] || [];
-            const cellContent = document.createElement("div");
-            cellContent.style.display = "flex";
-            cellContent.style.flexDirection = "column";
-            cellContent.style.alignItems = "center";
-            cellContent.style.justifyContent = "center";
-            cellContent.style.gap = "4px";
+    for (let d = 1; d <= totalDays; d++) {
+        const cell = document.createElement("div");
+        cell.className = "calendar-cell";
+        
+        const items = eventsByDay[d] || [];
+        
+        const cellContent = document.createElement("div");
+        cellContent.style.display = "flex";
+        cellContent.style.flexDirection = "column";
+        cellContent.style.alignItems = "center";
+        cellContent.style.justifyContent = "flex-start";
+        cellContent.style.gap = "6px";
+        cellContent.style.width = "100%";
 
-            const dateLine = document.createElement("div");
-            dateLine.textContent = `${d}日`;
-            dateLine.style.fontWeight = "bold";
-            cellContent.appendChild(dateLine);
+        const dateLine = document.createElement("div");
+        dateLine.textContent = `${d}日`;
+        dateLine.style.fontWeight = "bold";
+        dateLine.style.alignSelf = "flex-start";
+        cellContent.appendChild(dateLine);
 
-            if (items.length) {
-                cell.classList.add("event");
+        if (items.length) {
+            cell.classList.add("event");
 
-                // イベントごとにタイトル＋チェックボックスを生成
-                items.forEach(evt => {
-                    const evtBlock = document.createElement("div");
-                    evtBlock.style.display = "flex";
-                    evtBlock.style.flexDirection = "column";
-                    evtBlock.style.alignItems = "flex-start";
-                    evtBlock.style.width = "100%";
-                    evtBlock.style.borderTop = "1px solid #ddd";
-                    evtBlock.style.paddingTop = "4px";
-                    evtBlock.style.marginTop = "4px";
+            items.forEach(item => {
+                const eventWrapper = document.createElement("div");
+                eventWrapper.style.width = "100%";
+                eventWrapper.style.borderBottom = "1px dashed #ddd";
+                eventWrapper.style.paddingBottom = "4px";
+                eventWrapper.style.marginBottom = "4px";
+                eventWrapper.style.display = "flex";
+                eventWrapper.style.flexDirection = "column";
+                eventWrapper.style.alignItems = "center";
 
-                    const titleDiv = document.createElement("div");
-                    titleDiv.style.fontSize = "12px";
-                    titleDiv.style.lineHeight = "1.3";
-                    titleDiv.style.wordBreak = "break-all";
-                    titleDiv.textContent = evt.title;
+                // 1. イベント名（タイトル）の表示
+                const titleDiv = document.createElement("div");
+                titleDiv.style.fontSize = "12px";
+                titleDiv.style.lineHeight = "1.2";
+                titleDiv.style.whiteSpace = "pre-line";
+                titleDiv.style.textAlign = "center";
+                titleDiv.style.fontWeight = "500";
+                titleDiv.textContent = item.title;
+                eventWrapper.appendChild(titleDiv);
 
-                    if (evt.isToday) {
-                        const badge = document.createElement("div");
-                        badge.style.fontSize = "11px";
-                        badge.style.color = "#333";
-                        badge.style.marginTop = "2px";
-                        badge.textContent = evt.shared ? `✅ X済` : `⚠ 要投稿`;
-                        evtBlock.appendChild(titleDiv);
-                        evtBlock.appendChild(badge);
-                    } else {
-                        evtBlock.appendChild(titleDiv);
+                // Firebase用IDの安全な抽出
+                let eventId = item.id || item.key || item.FirebaseKey || "";
+                if (!eventId && typeof events !== 'undefined' && events) {
+                    eventId = Object.keys(events).find(key => 
+                        events[key].title === item.title && 
+                        (events[key].date === item.date || key.includes(item.date || ""))
+                    ) || "";
+                    if (!eventId) {
+                        eventId = Object.keys(events).find(key => events[key].title === item.title) || "";
                     }
-
-                    const checkContainer = document.createElement("label");
-                    checkContainer.style.display = "flex";
-                    checkContainer.style.alignItems = "center";
-                    checkContainer.style.gap = "4px";
-                    checkContainer.style.margin = "4px 0 0 0";
-                    checkContainer.style.cursor = "pointer";
-                    checkContainer.style.fontSize = "12px";
-
-                    const checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.className = "event-check";
-                    checkbox.setAttribute("data-id", evt.id || "");
-                    checkbox.onclick = (e) => {
-                        e.stopPropagation();
-                    };
-
-                    const checkLabel = document.createElement("span");
-                    checkLabel.textContent = "共有";
-                    checkLabel.style.color = "#333";
-
-                    checkContainer.appendChild(checkbox);
-                    checkContainer.appendChild(checkLabel);
-                    evtBlock.appendChild(checkContainer);
-
-                    cellContent.appendChild(evtBlock);
-                });
-
-                if (selectedEventId && items.some(evt => evt.id === selectedEventId)) {
-                    cell.classList.add("active");
                 }
+
+                // 2. 共有チェックボックスの生成
+                const checkContainer = document.createElement("label");
+                checkContainer.style.display = "flex";
+                checkContainer.style.alignItems = "center";
+                checkContainer.style.gap = "4px";
+                checkContainer.style.margin = "4px 0";
+                checkContainer.style.cursor = "pointer";
+                checkContainer.style.fontSize = "12px";
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.className = "event-check";
+                checkbox.setAttribute("data-id", eventId); 
+                checkbox.onclick = (event) => {
+                    event.stopPropagation();
+                };
+
+                const checkLabel = document.createElement("span");
+                checkLabel.textContent = "共有";
+                checkLabel.style.color = "#333";
+
+                checkContainer.appendChild(checkbox);
+                checkContainer.appendChild(checkLabel);
+                eventWrapper.appendChild(checkContainer);
+
+                // 3. 詳細ページへボタンの生成
+                const detailBtn = document.createElement("button");
+                detailBtn.textContent = "詳細ページへ";
+                detailBtn.className = "calendar-detail-btn";
+                detailBtn.style.fontSize = "11px";
+                detailBtn.style.padding = "2px 6px";
+                detailBtn.onclick = (event) => {
+                    event.stopPropagation();
+                    const currentParam = new URLSearchParams(window.location.search);
+                    const user = currentParam.get('user') || 'default';
+                    window.location.href = `share.html?event=${eventId}&user=${user}`;
+                };
+                eventWrapper.appendChild(detailBtn);
+
+                cellContent.appendChild(eventWrapper);
+            });
+
+            // ステータスバッジの表示
+            const todayFlags = items.filter(evt => evt.isToday);
+            if (todayFlags.length) {
+                const statusBadge = document.createElement("div");
+                statusBadge.style.fontSize = "11px";
+                statusBadge.style.color = "#333";
+                statusBadge.style.marginTop = "2px";
+                statusBadge.style.textAlign = "center";
+                statusBadge.style.whiteSpace = "pre-line";
+                statusBadge.textContent = todayFlags.map(evt => evt.shared ? `✅ X済` : `⚠ 要投稿`).join("\n");
+                cellContent.appendChild(statusBadge);
             }
 
-            cell.appendChild(cellContent);
-            calendarGrid.appendChild(cell);
+            const firstEventId = items[0].id || items[0].key || "";
+            cell.onclick = () => {
+                if (typeof setSelectedEvent === 'function' && firstEventId) {
+                    setSelectedEvent(firstEventId);
+                }
+            };
         }
-    };
+
+        cell.appendChild(cellContent);
+        calendarGrid.appendChild(cell);
+    }
+};
+    
 
     const updateCalendar = () => {
         const { year, month } = normalizeView(currentViewYear, currentViewMonth);
