@@ -3,90 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <title>投稿内容の確認 - 推し活動リスト</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background: #f9f9f9; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h1 { font-size: 20px; color: #333; margin-top: 0; }
-    .event-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-    .btn-container { display: flex; gap: 10px; margin-top: 20px; }
-    .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; text-align: center; text-decoration: none; }
-    .btn-back { background: #e0e0e0; color: #333; }
-    .btn-x { background: #1DA1F2; color: white; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f7fa;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 20px;
+      border-bottom: 1px solid #edf2f7;
+      padding-bottom: 15px;
+    }
+    .status-text {
+      color: #666;
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    .error-text {
+      color: #e53e3e;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    .event-list-container {
+      text-align: left;
+      margin: 20px auto;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 15px 20px;
+      border: 1px solid #e2e8f0;
+    }
+    .event-list-container ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .event-list-container li {
+      margin-bottom: 8px;
+      font-size: 15px;
+      color: #2d3748;
+      line-height: 1.5;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.85;
+    }
+    .btn-back {
+      background-color: #e2e8f0;
+      color: #4a5568;
+    }
+    .btn-submit {
+      background-color: #1da1f2;
+      color: #ffffff;
+    }
   </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
-  <div class="card">
-    <h1>📝 Xに投稿する予定の確認</h1>
-    <p style="font-size: 13px; color: #666;">以下のイベントスケジュールをXにシェアします。よろしければ「この内容でXに投稿する」を押してください。</p>
+  <div class="card" id="capture-area">
+    <h2>📝 Xに投稿する予定の確認</h2>
     
-    <div id="preview-list" style="margin: 15px 0; border-top: 1px solid #eee;">
-      読み込み中...
+    <div id="message-element" class="status-text">読み込み中...</div>
+
+    <div id="events-display-box" style="display: none;" class="event-list-container">
+      <ul id="selected-events-list"></ul>
     </div>
 
-    <div class="btn-container">
-      <button id="backBtn" class="btn btn-back">← カレンダーに戻る</button>
-      <button id="finalPostBtn" class="btn btn-x">🕊️ この内容でXに投稿する</button>
+    <div class="btn-group">
+      <button type="button" class="btn-back" id="backBtn">← カレンダーに戻る</button>
+      <button type="button" class="btn-submit" id="shareSubmitBtn">📢 この内容でXに投稿する</button>
     </div>
   </div>
 
   <script>
-    // URLパラメータからデータを取得
-    const urlParams = new URLSearchParams(window.location.search);
-    const user = urlParams.get('user') || 'default';
-    const base64Data = urlParams.get('data');
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentUser = urlParams.get('user') || 'default';
+      const base64Data = urlParams.get('data');
 
-    const previewList = document.getElementById('preview-list');
+      const messageElement = document.getElementById('message-element');
+      const eventsDisplayBox = document.getElementById('events-display-box');
+      const selectedEventsList = document.getElementById('selected-events-list');
+      const backBtn = document.getElementById('backBtn');
+      const shareSubmitBtn = document.getElementById('shareSubmitBtn');
 
-    let checkedEvents = [];
-
-    // データの復元と表示
-    if (base64Data) {
-      try {
-        const decodedJson = decodeURIComponent(atob(base64Data));
-        checkedEvents = JSON.parse(decodedJson);
-        
-        previewList.innerHTML = "";
-        if (checkedEvents.length === 0) {
-          previewList.innerHTML = "<p style='color:red;'>選択された予定がありません。</p>";
-        } else {
-          // 選択された予定を画面にリスト表示
-          checkedEvents.forEach(evt => {
-            const div = document.createElement('div');
-            div.className = 'event-item';
-            div.textContent = `📅 ${evt.date || ''} ： ${evt.title}`;
-            previewList.appendChild(div);
-          });
-        }
-      } catch (e) {
-        previewList.innerHTML = "<p style='color:red;'>データの読み込みに失敗しました。</p>";
-        console.error(e);
+      // --- 1. カレンダーに戻るボタンの処理（ユーザー情報引き継ぎ） ---
+      if (backBtn) {
+        backBtn.onclick = (e) => {
+          e.preventDefault();
+          window.location.href = `index.html?user=${currentUser}`;
+        };
       }
-    }
 
-    // 「戻る」ボタン：ユーザー名を維持してインデックスに戻る
-    document.getElementById('backBtn').onclick = () => {
-      window.location.href = `index.html?user=${user}`;
-    };
+      let sharedEvents = [];
 
-    // 「この内容でXに投稿する」ボタン：ここで初めてXのインテントURLを開く
-    document.getElementById('finalPostBtn').onclick = () => {
-      if (checkedEvents.length === 0) return;
+      // --- 2. データの復元ロジック ---
+      if (base64Data && base64Data !== 'JTVCJTVD') {
+        try {
+          const decodedJson = decodeURIComponent(atob(base64Data));
+          sharedEvents = JSON.parse(decodedJson);
+        } catch (e) {
+          console.error("データ復元失敗:", e);
+        }
+      }
 
-      // カレンダー側（index.html）で同じデータを再現して開かせるための共有URLを作成
-      // ※ローカル環境（file:///）のセキュリティエラーを考慮しつつドメインを解決
-      const baseOrigin = window.location.origin === "null" ? "https://juugaya.github.io" : window.location.origin;
-      // パスをindex.htmlに差し替えて、カレンダー側でデータが再現されるようにする
-      const currentPath = window.location.pathname;
-      const indexPath = currentPath.substring(0, currentPath.lastIndexOf('/')) + '/index.html';
-      const shareUrl = `${baseOrigin}${indexPath}?user=${user}&data=${base64Data}`;
+      // --- 3. 画面へのリスト反映 ---
+      if (sharedEvents && sharedEvents.length > 0) {
+        // メッセージを切り替え
+        if (messageElement) {
+          messageElement.textContent = "以下のイベントスケジュールをXにシェアします。よろしければ「この内容でXに投稿する」を押してください。";
+        }
 
-      // ツイート本文の作成
-      const tweetText = encodeURIComponent(`選んだSTU48の推し活予定カレンダーを共有します！✨\n#推し活動リスト #STU48`);
-      const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
+        // リストを生成して挿入
+        selectedEventsList.innerHTML = "";
+        sharedEvents.forEach(evt => {
+          const li = document.createElement('li');
+          const dateStr = evt.date ? `📅 ${evt.date} ` : `✨ `;
+          li.textContent = `${dateStr}${evt.title}`;
+          selectedEventsList.appendChild(li);
+        });
 
-      window.open(xUrl, '_blank');
-    };
+        // 予定ボックスを表示
+        eventsDisplayBox.style.display = "block";
+
+        // --- 4. 【画像生成 ＆ 短縮URL】X投稿ボタンの処理 ---
+        if (shareSubmitBtn) {
+          shareSubmitBtn.onclick = () => {
+            const captureArea = document.getElementById('capture-area');
+            if (!captureArea) return;
+
+            // ボタン類が画像に写り込まないように一時的に非表示にする
+            const btnGroup = document.querySelector('.btn-group');
+            if (btnGroup) btnGroup.style.visibility = 'hidden';
+
+            // html2canvasでチェックした予定のカードだけをきれいに撮影
+            html2canvas(captureArea, {
+              useCORS: true,
+              scale: 2, // 高解像度
+              backgroundColor: "#f5f7fa"
+            }).then(canvas => {
+              // ボタンの表示を元に戻す
+              if (btnGroup) btnGroup.style.visibility = 'visible';
+
+              // 画像をダウンロードさせる
+              const imageData = canvas.toDataURL("image/png");
+              const downloadLink = document.createElement('a');
+              downloadLink.href = imageData;
+              downloadLink.download = `my_selected_schedule.png`;
+              document.body.appendChild(downloadLink);
+              downloadLink.click();
+              document.body.removeChild(downloadLink);
+
+              // Xに持っていくテキスト（あふれないように最大3件までに省略）
+              let text = "【予定共有】チェックしたスケジュールを公開！\n";
+              const maxDisplay = 3;
+              sharedEvents.forEach((evt, idx) => {
+                if (idx < maxDisplay) {
+                  text += `${evt.date ? evt.date + ' ' : ''}${evt.title}\n`;
+                }
+              });
+              if (sharedEvents.length > maxDisplay) {
+                text += `他 ${sharedEvents.length - maxDisplay} 件\n`;
+              }
+              text += "#推し活動リスト\n";
+
+              // 💡 URLは長すぎるデータを排除し、スマートにトップページへリンク
+              const calendarUrl = `${window.location.origin}/index.html?user=${currentUser}`;
+              
+              // Xの投稿画面を起動
+              const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(calendarUrl)}`;
+              window.open(xUrl, '_blank');
+
+              alert('選択した予定のリスト画像をダウンロードしました！\nX（Twitter）画面が開きますので、保存された画像を添付してポストしてください！');
+            });
+          };
+        }
+
+      } else {
+        // 予定がない場合のエラー表示
+        if (messageElement) {
+          messageElement.className = "error-text";
+          messageElement.textContent = "選択された予定がありません。";
+        }
+      }
+    });
   </script>
 </body>
 </html>
