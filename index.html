@@ -92,6 +92,7 @@
           const encodedData = btoa(encodeURIComponent(jsonString));
           const baseUrl = `https://juugaya.github.io/otak_Event-sharing-participation-calendar/index.html`;
           const shareUrl = `${baseUrl}?user=${currentUser}&data=${encodedData}`
+          alert(shareUrl);
           const tweetText = encodeURIComponent(`${currentUser}のイベントカレンダーを共有します！ #推し活動リスト`);
           const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
           window.open(xUrl, '_blank');

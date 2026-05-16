@@ -157,8 +157,7 @@
 
         // 予定ボックスを表示
         eventsDisplayBox.style.display = "block";
-
-        // --- 4. 【画像生成 ＆ 短縮URL】X投稿ボタンの処理 ---
+          // --- 4. 【画像生成 ＆ 正しい共有URL発行】X投稿ボタンの処理 ---
         if (shareSubmitBtn) {
           shareSubmitBtn.onclick = () => {
             const captureArea = document.getElementById('capture-area');
@@ -186,7 +185,7 @@
               downloadLink.click();
               document.body.removeChild(downloadLink);
 
-              // Xに持っていくテキスト（あふれないように最大3件までに省略）
+              // Xに持っていくテキスト（最大3件までに省略）
               let text = "【予定共有】チェックしたスケジュールを公開！\n";
               const maxDisplay = 3;
               sharedEvents.forEach((evt, idx) => {
@@ -199,8 +198,17 @@
               }
               text += "#推し活動リスト\n";
 
-              // 💡 URLは長すぎるデータを排除し、スマートにトップページへリンク
-              const calendarUrl = `${window.location.origin}/index.html?user=${currentUser}`;
+              // ==========================================================
+              // 💡 他の人がカレンダーを復元できるように「data」パラメータを復活！
+              // ただし、すべての予定ではなく「今回チェックした予定だけ」を圧縮して乗せるので
+              // 文字数は大幅に短くなり、Xの文字数制限（URL枠）にすんなり収まります。
+              // ==========================================================
+              const jsonString = JSON.stringify(sharedEvents);
+              const encodedData = btoa(encodeURIComponent(jsonString));
+              
+              // あなたが将来このシステムをネット上に公開（RenderやGitHub Pagesなど）したときにも
+              // そのまま動くように、現在のドメインを自動取得する形にします。
+              const calendarUrl = `${window.location.origin}/index.html?user=${currentUser}&data=${encodedData}`;
               
               // Xの投稿画面を起動
               const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(calendarUrl)}`;
@@ -209,7 +217,7 @@
               alert('選択した予定のリスト画像をダウンロードしました！\nX（Twitter）画面が開きますので、保存された画像を添付してポストしてください！');
             });
           };
-        }
+        }   
 
       } else {
         // 予定がない場合のエラー表示
