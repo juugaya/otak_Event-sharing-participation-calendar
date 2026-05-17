@@ -18,6 +18,8 @@
 
   <!-- 地図アプリ本体 -->
   <script src="app.js" defer></script>
+   <!-- 外部ライブラリを追加 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -38,6 +40,32 @@
       <button id="share-x-btn" class="calendar-button" style="background: #1DA1F2; color: white;">🕊️ X（Twitter）にカレンダーを投稿する</button>
 
       <button id="goAdminBtn" class="calendar-button" style="background: #8E44AD; color: white;">🛠️ イベント管理へ</button>
+    <!-- ★ 選択中イベント リアルタイム表示パネル -->
+<div id="selectedEventsPanel" style="
+  display: none;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0f8ff, #e8f4fb);
+  border: 1px solid #b3d9f5;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(52,152,219,0.10);
+">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+    <span style="font-weight: bold; color: #2c7bb6; font-size: 14px;">
+      ✅ 選択中のイベント（<span id="selectedCount">0</span>件）
+    </span>
+    
+    <button id="shareSelectedBtn" class="calendar-button" style="
+      background: #1DA1F2; color: white; font-size: 13px;
+      padding: 7px 14px; border-radius: 6px;
+    ">🕊️ 選択イベントをXに投稿</button>
+  </div>
+  <ul id="selectedEventsList" style="
+    margin: 0; padding: 0 0 0 4px;
+    list-style: none;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  "></ul>
+</div>
     </div>
     <div id="calendarMonth" style="margin-bottom: 10px; font-weight: bold;">読み込み中...</div>
     <div id="calendarGrid" class="calendar-grid"></div>
@@ -59,132 +87,172 @@
     <div id="map"></div>
   </div>
 
-<script>
-    (() => {
-      // --- URLパラメータの取得 ---
-      const urlParams = new URLSearchParams(window.location.search);
-      const currentUser = urlParams.get('user') || 'default';
-      const base64Data = urlParams.get('data');
+  <script>
+  // ==========================================================
+  // ★ 選択中イベント リアルタイム表示
+  // ==========================================================
+  function updateSelectedPanel() {
+    const panel   = document.getElementById('selectedEventsPanel');
+    const list    = document.getElementById('selectedEventsList');
+    const countEl = document.getElementById('selectedCount');
+    if (!panel || !list || !countEl) return;
 
-      // --- 管理画面への遷移ボタン ---
-      if (!window.hasAdminBtnBound) {
-        const adminBtn = document.getElementById("adminBtn");
-        if (adminBtn) {
-          adminBtn.onclick = () => {
-            window.location.href = `event-admin.html?user=${currentUser}`;
-          };
-        }
-        const goAdminBtn = document.getElementById("goAdminBtn");
-        if (goAdminBtn) {
-          goAdminBtn.onclick = () => {
-            window.location.href = `event-admin.html?user=${currentUser}`;
-          };
-        }
-        window.hasAdminBtnBound = true;
-      }
+    const ids = window.checkedEventIds || new Set();
+    const allEvents = window.calendarEvents || {};
 
-      // 🕊️ この画面（カレンダー全体）をXで共有する既存ボタン
-      const shareEventBtn = document.getElementById('shareEventBtn');
-      if (shareEventBtn) {
-        shareEventBtn.onclick = () => {
-          const currentEvents = typeof loadEvents === 'function' ? loadEvents() : [];
-          const jsonString = JSON.stringify(currentEvents);
-          const encodedData = btoa(encodeURIComponent(jsonString));
-          const baseUrl = `https://juugaya.github.io/otak_Event-sharing-participation-calendar/index.html`;
-          const shareUrl = `${baseUrl}?user=${currentUser}&data=${encodedData}`
-          alert(shareUrl);
-          const tweetText = encodeURIComponent(`${currentUser}のイベントカレンダーを共有します！ #推し活動リスト`);
-          const xUrl = `https://x.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(shareUrl)}`;
-          window.open(xUrl, '_blank');
-        };
-      }
-
-      // ページ読み込み時のカレンダーデータ復元
-      window.addEventListener('DOMContentLoaded', () => {
-        let eventsToShow = [];
-        if (base64Data) {
-          try {
-            const decodedJson = decodeURIComponent(atob(base64Data));
-            eventsToShow = JSON.parse(decodedJson);
-          } catch (e) {
-            console.error("データ復元失敗", e);
-          }
-        } else {
-          eventsToShow = typeof loadEvents === 'function' ? loadEvents() : [];
-        }
-        if (typeof renderCalendar === 'function') {
-          renderCalendar(eventsToShow);
-        }
+    const checkedItems = [];
+    ids.forEach(id => {
+      const evt = allEvents[id];
+      checkedItems.push({
+        id,
+        title: evt ? evt.title : id,
+        date:  evt ? (evt.date || '') : ''
       });
+    });
 
-      function loadEvents() {
-        const storageKey = `events_${currentUser}`;
-        const savedEvents = localStorage.getItem(storageKey);
-        return savedEvents ? JSON.parse(savedEvents) : [];
-      }
+    checkedItems.sort((a, b) => (a.date > b.date ? 1 : -1));
 
-      // ==========================================================
-      // ★ チェックした予定を確認画面（preview.html）に送る処理
-      // ==========================================================
-      const shareXBtn = document.getElementById('share-x-btn');
-      if (shareXBtn) {
-        shareXBtn.onclick = () => {
-          const checkBoxes = document.querySelectorAll('.event-check');
-          const checkedEventIds = [];
-          
-          checkBoxes.forEach(box => {
-            if (box.checked) {
-              const dataId = box.getAttribute('data-id');
-              if (dataId) checkedEventIds.push(dataId);
-            }
-          });
+    if (checkedItems.length === 0) {
+      panel.style.display = 'none';
+      list.innerHTML = '';
+      countEl.textContent = '0';
+      return;
+    }
 
-          if (checkedEventIds.length === 0) {
-            alert('共有したいイベントの「共有」にチェックを入れてからボタンを押してください！');
-            return;
-          }
+    panel.style.display = 'block';
+    countEl.textContent = checkedItems.length;
+    list.innerHTML = checkedItems.map(item => `
+      <li style="
+        background: white;
+        border: 1px solid #b3d9f5;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 12px;
+        color: #2c7bb6;
+        white-space: nowrap;
+      ">
+        ${item.date
+          ? `<span style="color:#888;margin-right:4px;">${item.date}</span>`
+          : ''}${item.title}
+      </li>
+    `).join('');
+  }
 
-          const sharedEventsList = [];
-          let allEvents = {};
+  // チェックボックス変更を監視
+  document.addEventListener('change', e => {
+    if (e.target && e.target.classList.contains('event-check')) {
+      updateSelectedPanel();
+    }
+  });
 
-          // Firebaseのグローバル変数「events」またはローカルストレージからデータを探す
-          if (typeof events !== 'undefined' && events) {
-            allEvents = events;
-          } else {
-            const localData = localStorage.getItem(`events_${currentUser}`);
-            if (localData) {
-              try { allEvents = JSON.parse(localData); } catch(e){}
-            }
-          }
+  (() => {
+    // --- URLパラメータの取得 ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUser = urlParams.get('user') || 'default';
+    const base64Data = urlParams.get('data');
 
-          checkedEventIds.forEach(id => {
-            if (allEvents && allEvents[id]) {
-              sharedEventsList.push({
-                id: id,
-                title: allEvents[id].title,
-                date: allEvents[id].date || ""
-              });
-            } else {
-              // 保険: IDからタイトルを抽出
-              let fallbackTitle = id.replace(/^stu_event_[^_]+_/, "");
-              fallbackTitle = fallbackTitle.substring(0, fallbackTitle.lastIndexOf('_') !== -1 ? fallbackTitle.lastIndexOf('_') : fallbackTitle.length);
-              sharedEventsList.push({
-                id: id,
-                title: fallbackTitle || id,
-                date: ""
-              });
-            }
-          });
-
-          const jsonString = JSON.stringify(sharedEventsList);
-          const encodedData = btoa(encodeURIComponent(jsonString));
-          
-          // 💡 ユーザー情報をしっかり引き継いで確認画面へ遷移
-          window.location.href = `preview.html?user=${currentUser}&data=${encodedData}`;
+    // --- 管理画面への遷移ボタン ---
+    if (!window.hasAdminBtnBound) {
+      const adminBtn = document.getElementById("adminBtn");
+      if (adminBtn) {
+        adminBtn.onclick = () => {
+          window.location.href = `event-admin.html?user=${currentUser}`;
         };
       }
-    })();
-  </script>
+      const goAdminBtn = document.getElementById("goAdminBtn");
+      if (goAdminBtn) {
+        goAdminBtn.onclick = () => {
+          window.location.href = `event-admin.html?user=${currentUser}`;
+        };
+      }
+      window.hasAdminBtnBound = true;
+    }
+
+    // ページ読み込み時のカレンダーデータ復元
+    window.addEventListener('DOMContentLoaded', () => {
+      let eventsToShow = [];
+      if (base64Data) {
+        try {
+          const decodedJson = decodeURIComponent(atob(base64Data));
+          eventsToShow = JSON.parse(decodedJson);
+        } catch (e) {
+          console.error("データ復元失敗", e);
+        }
+      }
+      if (typeof renderCalendar === 'function') {
+        renderCalendar(eventsToShow);
+      }
+    });
+
+    // ==========================================================
+    // ★ パネル内「選択イベントをXに投稿」ボタン
+    // ==========================================================
+    const shareSelectedBtn = document.getElementById('shareSelectedBtn');
+    if (shareSelectedBtn) {
+      shareSelectedBtn.addEventListener('click', () => {
+        const ids = window.checkedEventIds || new Set();
+
+        if (ids.size === 0) {
+          alert('イベントが選択されていません。');
+          return;
+        }
+
+        const allEvents = window.calendarEvents || {};
+        const sharedEventsList = [];
+
+        ids.forEach(id => {
+          const evt = allEvents[id];
+          sharedEventsList.push({
+            id,
+            title: evt ? evt.title : id,
+            date:  evt ? (evt.date || '') : ''
+          });
+        });
+
+        localStorage.setItem('shared_events_bridge', JSON.stringify(sharedEventsList));
+        window.location.href = `preview.html?user=${currentUser}`;
+      });
+    }
+
+    // ==========================================================
+    // ★ ボタン行「X（Twitter）にカレンダーを投稿する」ボタン
+    // ==========================================================
+    const shareXBtn = document.getElementById('share-x-btn');
+    if (shareXBtn) {
+      shareXBtn.onclick = () => {
+        const ids = window.checkedEventIds || new Set();
+
+        if (ids.size === 0) {
+          alert('共有したいイベントの「共有」にチェックを入れてからボタンを押してください！');
+          return;
+        }
+
+        const allEvents = window.calendarEvents || {};
+        const sharedEventsList = [];
+
+        ids.forEach(id => {
+          const evt = allEvents[id];
+          if (evt) {
+            sharedEventsList.push({
+              id,
+              title: evt.title,
+              date: evt.date || ''
+            });
+          } else {
+            const dateMatch = id.match(/\d{4}-\d{2}-\d{2}/);
+            const fallbackDate = dateMatch ? dateMatch[0] : '';
+            const fallbackTitle = id.replace(/^stu_event_[^_]+_/, '').split('_')[0];
+            sharedEventsList.push({ id, title: fallbackTitle || 'イベント', date: fallbackDate });
+          }
+        });
+
+        localStorage.setItem('shared_events_bridge', JSON.stringify(sharedEventsList));
+        window.location.href = `preview.html?user=${currentUser}`;
+      };
+    }
+
+  })();
+</script>
 
 
   <div id="info"></div>
@@ -300,8 +368,6 @@
       #event-list { padding: 12px; }
     }
   </style>
-
-  <script src="mode-switch.js" defer></script>
 
 </body>
 </html>

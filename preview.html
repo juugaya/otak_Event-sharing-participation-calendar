@@ -9,56 +9,132 @@
       font-family: 'Helvetica Neue', Arial, sans-serif;
       background-color: #f5f7fa;
       margin: 0;
-      padding: 40px 20px;
+      padding: 30px 15px;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       box-sizing: border-box;
     }
+    
+    /* 💡 3か月分が横、またはきれいに収まるように全体幅を1100pxに拡張 */
     .card {
       background: #ffffff;
-      padding: 30px;
+      padding: 25px;
       border-radius: 16px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      max-width: 500px;
+      max-width: 1100px;
       width: 100%;
       text-align: center;
     }
     h2 {
       margin-top: 0;
       color: #333;
-      font-size: 20px;
+      font-size: 22px;
       border-bottom: 1px solid #edf2f7;
       padding-bottom: 15px;
     }
     .status-text {
-      color: #666;
-      font-size: 14px;
-      margin: 20px 0;
-    }
-    .error-text {
-      color: #e53e3e;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    .event-list-container {
-      text-align: left;
-      margin: 20px auto;
-      background: #f8fafc;
-      border-radius: 8px;
-      padding: 15px 20px;
-      border: 1px solid #e2e8f0;
-    }
-    .event-list-container ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-    .event-list-container li {
-      margin-bottom: 8px;
-      font-size: 15px;
       color: #2d3748;
-      line-height: 1.5;
+      font-size: 14px;
+      margin: 15px 0;
+      line-height: 1.6;
+      background: #fffaf0;
+      border: 1px solid #feebc8;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: left;
+    }
+    .status-text strong {
+      color: #dd6b20;
+    }
+
+    /* 💡 3つのカレンダーを横並び（画面が狭いときは自動改行）にするコンテナ */
+    .calendars-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin: 25px 0;
+    }
+    
+    /* 1か月分のカレンダー枠（3カラム均等に収まるサイズ） */
+    .mini-calendar-container {
+      flex: 1;
+      min-width: 320px;
+      max-width: 350px;
+      background: #ffffff;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+    .mini-calendar-container h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: #2b6cb0;
+      text-align: left;
+      border-left: 4px solid #3182ce;
+      padding-left: 8px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .day-header {
+      background-color: #ebf8ff;
+      padding: 4px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 11px;
+      color: #2b6cb0;
+      border-radius: 4px;
+    }
+    .day-cell {
+      background: #fff;
+      border: 1px solid #edf2f7;
+      border-radius: 6px;
+      min-height: 70px;
+      padding: 3px;
+      box-sizing: border-box;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .day-number {
+      font-weight: bold;
+      font-size: 10px;
+      color: #4a5568;
+      margin-bottom: 2px;
+    }
+    .event-item {
+      background: #ebf8ff;
+      padding: 1px 3px;
+      border-radius: 3px;
+      font-size: 9px;
+      color: #2b6cb0;
+      border-left: 2px solid #3182ce;
+      word-break: break-all;
+      line-height: 1.2;
+      margin-bottom: 2px;
+    }
+
+    .upload-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 2px dashed #cbd5e0;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .upload-label {
+      display: block;
+      font-size: 13px;
+      color: #4a5568;
+      font-weight: bold;
+      margin-bottom: 8px;
+      cursor: pointer;
     }
     .btn-group {
       display: flex;
@@ -95,13 +171,18 @@
   <div class="card" id="capture-area">
     <h2>📝 Xに投稿する予定の確認</h2>
     
-    <div id="message-element" class="status-text">読み込み中...</div>
-
-    <div id="events-display-box" style="display: none;" class="event-list-container">
-      <ul id="selected-events-list"></ul>
+    <div id="message-element" class="status-text">
+      <strong>【重要】</strong>「この内容でXに投稿する」ボタンを押したら画像が自分のダウンロードフォルダ等にダウンロードされるのでそれを添付してxに投稿してください。
     </div>
 
-    <div class="btn-group">
+    <div class="calendars-row" id="calendarsRowContainer"></div>
+
+    <div class="upload-section" id="upload-section-area">
+      <label class="upload-label" for="imageUploader">📸 保存したスケジュール画像を選択する</label>
+      <input type="file" id="imageUploader" class="file-input" accept="image/*">
+    </div>
+
+    <div class="btn-group" id="btn-group-area">
       <button type="button" class="btn-back" id="backBtn">← カレンダーに戻る</button>
       <button type="button" class="btn-submit" id="shareSubmitBtn">📢 この内容でXに投稿する</button>
     </div>
@@ -111,15 +192,12 @@
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const currentUser = urlParams.get('user') || 'default';
-      const base64Data = urlParams.get('data');
 
       const messageElement = document.getElementById('message-element');
-      const eventsDisplayBox = document.getElementById('events-display-box');
-      const selectedEventsList = document.getElementById('selected-events-list');
+      const calendarsRowContainer = document.getElementById('calendarsRowContainer');
       const backBtn = document.getElementById('backBtn');
       const shareSubmitBtn = document.getElementById('shareSubmitBtn');
 
-      // --- 1. カレンダーに戻るボタンの処理（ユーザー情報引き継ぎ） ---
       if (backBtn) {
         backBtn.onclick = (e) => {
           e.preventDefault();
@@ -127,104 +205,192 @@
         };
       }
 
-      let sharedEvents = [];
-
-      // --- 2. データの復元ロジック ---
-      if (base64Data && base64Data !== 'JTVCJTVD') {
+      // データの取得
+        let sharedEvents = [];
         try {
-          const decodedJson = decodeURIComponent(atob(base64Data));
-          sharedEvents = JSON.parse(decodedJson);
+        const bridgeData = localStorage.getItem('shared_events_bridge');
+        console.log('【preview デバッグ】bridgeData:', bridgeData); // ★追加
+        if (bridgeData) {
+            sharedEvents = JSON.parse(bridgeData);
+        }
         } catch (e) {
-          console.error("データ復元失敗:", e);
+        console.error(e);
+        }
+
+console.log('【preview デバッグ】sharedEvents:', sharedEvents); // ★追加
+
+      if (sharedEvents.length === 0) {
+        const base64Data = urlParams.get('data');
+        if (base64Data && base64Data !== 'JTVCJTVD') {
+          try {
+            sharedEvents = JSON.parse(decodeURIComponent(atob(base64Data)));
+          } catch (e) { console.error(e); }
         }
       }
 
-      // --- 3. 画面へのリスト反映 ---
-      if (sharedEvents && sharedEvents.length > 0) {
-        // メッセージを切り替え
-        if (messageElement) {
-          messageElement.textContent = "以下のイベントスケジュールをXにシェアします。よろしければ「この内容でXに投稿する」を押してください。";
+        // ★ 当月から5ヶ月分 ＋ 選択イベントの月を表示
+        const monthSet = new Set();
+
+        // 当月から5ヶ月分を必ず含める
+        const now = new Date();
+        for (let i = 0; i < 5; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
         }
 
-        // リストを生成して挿入
-        selectedEventsList.innerHTML = "";
-        sharedEvents.forEach(evt => {
-          const li = document.createElement('li');
-          const dateStr = evt.date ? `📅 ${evt.date} ` : `✨ `;
-          li.textContent = `${dateStr}${evt.title}`;
-          selectedEventsList.appendChild(li);
+        // 選択イベントの月も追加
+        sharedEvents.forEach(ev => {
+        if (ev.date) {
+            const m = ev.date.slice(0, 7);
+            if (m) monthSet.add(m);
+        }
         });
 
-        // 予定ボックスを表示
-        eventsDisplayBox.style.display = "block";
-          // --- 4. 【画像生成 ＆ 正しい共有URL発行】X投稿ボタンの処理 ---
-        if (shareSubmitBtn) {
-          shareSubmitBtn.onclick = () => {
-            const captureArea = document.getElementById('capture-area');
-            if (!captureArea) return;
+        const targetMonths = Array.from(monthSet).sort();
 
-            // ボタン類が画像に写り込まないように一時的に非表示にする
-            const btnGroup = document.querySelector('.btn-group');
-            if (btnGroup) btnGroup.style.visibility = 'hidden';
+      // イベントが0件のフォールバック（当月を表示）
+      if (targetMonths.length === 0) {
+        const now = new Date();
+        targetMonths.push(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+      }
 
-            // html2canvasでチェックした予定のカードだけをきれいに撮影
-            html2canvas(captureArea, {
-              useCORS: true,
-              scale: 2, // 高解像度
-              backgroundColor: "#f5f7fa"
-            }).then(canvas => {
-              // ボタンの表示を元に戻す
-              if (btnGroup) btnGroup.style.visibility = 'visible';
+      console.log('【preview デバッグ】targetMonths:', targetMonths); // ★確認用
 
-              // 画像をダウンロードさせる
-              const imageData = canvas.toDataURL("image/png");
-              const downloadLink = document.createElement('a');
-              downloadLink.href = imageData;
-              downloadLink.download = `my_selected_schedule.png`;
-              document.body.appendChild(downloadLink);
-              downloadLink.click();
-              document.body.removeChild(downloadLink);
+      calendarsRowContainer.innerHTML = "";
 
-              // Xに持っていくテキスト（最大3件までに省略）
-              let text = "【予定共有】チェックしたスケジュールを公開！\n";
-              const maxDisplay = 3;
-              sharedEvents.forEach((evt, idx) => {
-                if (idx < maxDisplay) {
-                  text += `${evt.date ? evt.date + ' ' : ''}${evt.title}\n`;
-                }
-              });
-              if (sharedEvents.length > maxDisplay) {
-                text += `他 ${sharedEvents.length - maxDisplay} 件\n`;
-              }
-              text += "#推し活動リスト\n";
+      
+      targetMonths.forEach(yearMonth => {
+        const [year, month] = yearMonth.split('-').map(Number);
+        
+        const calWrapper = document.createElement('div');
+        calWrapper.className = 'mini-calendar-container';
+        
+        const calTitle = document.createElement('h3');
+        calTitle.textContent = `📅 ${year}年${month}月`;
+        calWrapper.appendChild(calTitle);
+        
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid';
+        
+        const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+        weekdays.forEach(day => {
+          const div = document.createElement('div');
+          div.className = 'day-header';
+          div.textContent = day;
+          grid.appendChild(div);
+        });
 
-              // ==========================================================
-              // 💡 他の人がカレンダーを復元できるように「data」パラメータを復活！
-              // ただし、すべての予定ではなく「今回チェックした予定だけ」を圧縮して乗せるので
-              // 文字数は大幅に短くなり、Xの文字数制限（URL枠）にすんなり収まります。
-              // ==========================================================
-              const jsonString = JSON.stringify(sharedEvents);
-              const encodedData = btoa(encodeURIComponent(jsonString));
-              
-              // あなたが将来このシステムをネット上に公開（RenderやGitHub Pagesなど）したときにも
-              // そのまま動くように、現在のドメインを自動取得する形にします。
-              const calendarUrl = `${window.location.origin}/index.html?user=${currentUser}&data=${encodedData}`;
-              
-              // Xの投稿画面を起動
-              const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(calendarUrl)}`;
-              window.open(xUrl, '_blank');
+        const startDayOfWeek = new Date(year, month - 1, 1).getDay();
+        const totalDays = new Date(year, month, 0).getDate();
 
-              alert('選択した予定のリスト画像をダウンロードしました！\nX（Twitter）画面が開きますので、保存された画像を添付してポストしてください！');
-            });
-          };
-        }   
-
-      } else {
-        // 予定がない場合のエラー表示
-        if (messageElement) {
-          messageElement.className = "error-text";
-          messageElement.textContent = "選択された予定がありません。";
+        // 空白マス
+        for (let i = 0; i < startDayOfWeek; i++) {
+          const emptyCell = document.createElement('div');
+          emptyCell.className = 'day-cell';
+          emptyCell.style.backgroundColor = '#f7fafc';
+          grid.appendChild(emptyCell);
         }
+
+        // 日付マスの生成
+        for (let day = 1; day <= totalDays; day++) {
+          const cell = document.createElement('div');
+          cell.className = 'day-cell';
+
+          const numDiv = document.createElement('div');
+          numDiv.className = 'day-number';
+          numDiv.textContent = `${day}`;
+          cell.appendChild(numDiv);
+
+          // 💡 マッチング用の様々な日付パターンを用意
+          const padM = month.toString().padStart(2, '0');
+          const padD = day.toString().padStart(2, '0');
+          
+          const formatHyphen = `${year}-${padM}-${padD}`; // 2026-05-03
+          const formatShortHyphen = `${month}-${day}`;    // 5-3
+          const formatJapanese = `${month}月${day}日`;   // 5月3日
+
+          // 💡 送られてきたイベントデータを徹底的に解析してマッチングさせる
+          sharedEvents.forEach(ev => {
+            let isMatch = false;
+
+            // 1. 完全な日付プロパティによる比較
+            if (ev.date === formatHyphen) {
+              isMatch = true;
+            } 
+            // 2. IDや日付文字列に「5月3日」や「5-3」や「05-03」が含まれているか判定
+            else if (ev.id || ev.date) {
+              const targetStr = ((ev.id || '') + '_' + (ev.date || '')).toLowerCase();
+              
+              // 「_5-3_」や「_05-03_」のような区切り、または「5月3日」という日本語表現が含まれるか
+              if (
+                targetStr.includes(`_${month}-${day}_`) || 
+                targetStr.includes(`_${padM}-${padD}_`) ||
+                targetStr.includes(`-${padM}-${padD}`) ||
+                targetStr.includes(formatJapanese) ||
+                targetStr.includes(`_${month}-${padD}_`)
+              ) {
+                isMatch = true;
+              }
+            }
+
+            // マッチしたらカレンダーのマスにイベントを追加
+            if (isMatch) {
+              const evDiv = document.createElement('div');
+              evDiv.className = 'event-item';
+              evDiv.textContent = ev.title;
+              cell.appendChild(evDiv);
+            }
+          });
+
+          grid.appendChild(cell);
+        }
+        
+        calWrapper.appendChild(grid);
+        calendarsRowContainer.appendChild(calWrapper);
+      });
+
+      // X投稿ボタンのアクション
+      if (shareSubmitBtn) {
+        shareSubmitBtn.onclick = () => {
+          const captureArea = document.getElementById('capture-area');
+          const btnGroup = document.getElementById('btn-group-area');
+          const uploadSection = document.getElementById('upload-section-area');
+
+          if (btnGroup) btnGroup.style.visibility = 'hidden';
+          if (uploadSection) uploadSection.style.visibility = 'hidden';
+
+          html2canvas(captureArea, {
+            useCORS: true,
+            scale: 2,
+            backgroundColor: "#ffffff"
+          }).then(canvas => {
+            if (btnGroup) btnGroup.style.visibility = 'visible';
+            if (uploadSection) uploadSection.style.visibility = 'visible';
+
+            const imageData = canvas.toDataURL("image/png");
+            const downloadLink = document.createElement('a');
+            downloadLink.href = imageData;
+            downloadLink.download = `my_3months_schedule.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+            let text = "【予定共有】3か月分のスケジュールカレンダーを公開！\n";
+            if (sharedEvents.length > 0) {
+              sharedEvents.forEach((evt, idx) => {
+                if (idx < 2) text += `・${evt.title}\n`;
+              });
+              if (sharedEvents.length > 2) text += `他 ${sharedEvents.length - 2} 件\n`;
+            }
+            text += "#推し活動リスト\n";
+
+            const calendarUrl = `${window.location.origin}/index.html?user=${currentUser}`;
+            const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(calendarUrl)}`;
+            window.open(xUrl, '_blank');
+
+            alert('🎉 3か月分のカレンダーを画像としてダウンロードしました！\n\nX画面が開きますので、保存された画像を添付して投稿してください！');
+          });
+        };
       }
     });
   </script>

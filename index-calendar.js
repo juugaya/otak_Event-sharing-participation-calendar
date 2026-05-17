@@ -1,3 +1,7 @@
+// ★ファイルの一番最初（DOMContentLoadedの外側）に追加
+window.checkedEventIds = window.checkedEventIds || new Set();
+window.calendarEvents = {};
+
 document.addEventListener("DOMContentLoaded", () => {
 
     const db = firebase.database();
@@ -13,13 +17,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const initialSelectedEventId = calendarParams.get("event");
     let selectedEventId = initialSelectedEventId;
     let events = {};
+
     const today = new Date();
 
     const setSelectedEvent = (id) => {
         selectedEventId = id;
         updateCalendar();
     };
-
     const minView = new Date(today.getFullYear(), today.getMonth(), 1);
     const maxView = new Date(today.getFullYear(), today.getMonth() + 12, 1);
     let currentViewYear = today.getFullYear();
@@ -40,26 +44,26 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const getEventsForMonth = (year, month) => {
-        return Object.entries(events)
-            .map(([id, evt]) => {
-                if (!evt.date) return null;
-                const d = new Date(evt.date);
-                if (Number.isNaN(d.getTime())) return null;
-                if (d.getFullYear() === year && d.getMonth() === month) {
-                    return {
-                        id,
-                        title: evt.title,
-                        date: evt.date,
-                        day: d.getDate(),
-                        sharedAt: evt.lastSharedAt || null,
-                        shared: !!evt.lastSharedAt,
-                        isToday: isDateToday(evt.date)
-                    };
-                }
-                return null;
-            })
-            .filter(Boolean);
-    };
+    return Object.entries(events)
+        .map(([id, evt]) => {
+            if (!evt.date) return null;
+            const d = new Date(evt.date);
+            if (Number.isNaN(d.getTime())) return null;
+            if (d.getFullYear() === year && d.getMonth() === month) {
+                return {
+                    id,
+                    title: evt.title,
+                    date: evt.date,   // ★ ここが確実にセットされているか確認
+                    day: d.getDate(),
+                    sharedAt: evt.lastSharedAt || null,
+                    shared: !!evt.lastSharedAt,
+                    isToday: isDateToday(evt.date)
+                };
+            }
+            return null;
+        })
+        .filter(Boolean);
+};
 
     const renderCalendarGrid = (year, month, eventItems = [], highlightId = null) => {
     if (!calendarMonth || !calendarGrid || !calendarStatus) return;
@@ -133,17 +137,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 titleDiv.textContent = item.title;
                 eventWrapper.appendChild(titleDiv);
 
-                // Firebase用IDの安全な抽出
-                let eventId = item.id || item.key || item.FirebaseKey || "";
-                if (!eventId && typeof events !== 'undefined' && events) {
-                    eventId = Object.keys(events).find(key => 
-                        events[key].title === item.title && 
-                        (events[key].date === item.date || key.includes(item.date || ""))
-                    ) || "";
-                    if (!eventId) {
-                        eventId = Object.keys(events).find(key => events[key].title === item.title) || "";
+                // // Firebase用IDの安全な抽出
+                // let eventId = item.id || item.key || item.FirebaseKey || "";
+                // if (!eventId && typeof events !== 'undefined' && events) {
+                //     eventId = Object.keys(events).find(key => 
+                //         events[key].title === item.title && 
+                //         (events[key].date === item.date || key.includes(item.date || ""))
+                //     ) || "";
+                //     if (!eventId) {
+                //         eventId = Object.keys(events).find(key => events[key].title === item.title) || "";
+                //     }
+                // }
+                // ★ eventIdの取得を最優先でシンプルに
+                    let eventId = item.id || "";
+
+                    // idが空の場合はeventsオブジェクトから逆引き
+                    if (!eventId && typeof events !== 'undefined') {
+                        eventId = Object.keys(events).find(key =>
+                            events[key].title === item.title &&
+                            events[key].date === item.date
+                        ) || "";
                     }
-                }
+
+                    console.log('【eventId確認】', eventId, item.title, item.date); // ★デバッグ用
 
                 // 2. 共有チェックボックスの生成
                 const checkContainer = document.createElement("label");
@@ -157,10 +173,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
                 checkbox.className = "event-check";
-                checkbox.setAttribute("data-id", eventId); 
-                checkbox.onclick = (event) => {
-                    event.stopPropagation();
-                };
+                checkbox.setAttribute("data-id", eventId);
+                checkbox.setAttribute("data-title", item.title);
+                checkbox.setAttribute("data-date", item.date || "");
+
+                // ★ 再描画時にチェック状態を復元
+                checkbox.checked = window.checkedEventIds.has(eventId);
+
+                checkbox.addEventListener("change", (e) => {
+                    e.stopPropagation();
+                    if (checkbox.checked) {
+                        checkedEventIds.add(eventId);
+                    } else {
+                        window.checkedEventIds.delete(eventId);
+                    }
+                    // ★ index.html側のパネル更新を呼ぶ
+                    if (typeof updateSelectedPanel === "function") {
+                        updateSelectedPanel();
+                    }
+                });
+                checkbox.onclick = (e) => e.stopPropagation();
 
                 const checkLabel = document.createElement("span");
                 checkLabel.textContent = "共有";
@@ -218,18 +250,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const { year, month } = normalizeView(currentViewYear, currentViewMonth);
         currentViewYear = year;
         currentViewMonth = month;
-        const isSelectedEvent = selectedEventId && events[selectedEventId];
+        // const isSelectedEvent = selectedEventId && events[selectedEventId];
 
-        if (isSelectedEvent) {
-            const evt = events[selectedEventId];
-            if (evt.date) {
-                const eventDateObj = new Date(evt.date);
-                if (!Number.isNaN(eventDateObj.getTime())) {
-                    currentViewYear = eventDateObj.getFullYear();
-                    currentViewMonth = eventDateObj.getMonth();
-                }
-            }
-        }
+        // if (isSelectedEvent) {
+        //     const evt = events[selectedEventId];
+        //     if (evt.date) {
+        //         const eventDateObj = new Date(evt.date);
+        //         if (!Number.isNaN(eventDateObj.getTime())) {
+        //             currentViewYear = eventDateObj.getFullYear();
+        //             currentViewMonth = eventDateObj.getMonth();
+        //         }
+        //     }
+        // }
 
         const monthEvents = getEventsForMonth(currentViewYear, currentViewMonth);
         renderCalendarGrid(currentViewYear, currentViewMonth, monthEvents, selectedEventId);
@@ -386,6 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const id = child.key;
             const evt = child.val();
             events[id] = evt;
+            window.calendarEvents = events; // ★ここに追加
 
             const div = document.createElement("div");
             div.className = "event-item";
@@ -414,6 +447,8 @@ document.addEventListener("DOMContentLoaded", () => {
             div.appendChild(detailBtn);
             eventList.appendChild(div);
         });
+
+        window.calendarEvents = events; // ★ここにも追加
 
         if (typeof selectedEventId !== 'undefined' && selectedEventId && events[selectedEventId] && events[selectedEventId].date) {
             const selectedDate = new Date(events[selectedEventId].date);
